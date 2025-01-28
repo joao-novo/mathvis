@@ -1,0 +1,10 @@
+name: build_tool_runner
+version: 1.0.0
+publish_to: none
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  build_tool:
+    path: "/home/joaonovo/projects/mathvis/rust_builder/cargokit/build_tool"

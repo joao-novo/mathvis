@@ -1,0 +1,1 @@
+ /home/joaonovo/projects/mathvis/.dart_tool/flutter_build/7c03409810b7a5ecfa49477e6e6ac461/native_assets.yaml: 

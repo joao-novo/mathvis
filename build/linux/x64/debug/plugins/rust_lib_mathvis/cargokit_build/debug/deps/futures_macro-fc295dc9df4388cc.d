@@ -1,0 +1,9 @@
+/home/joaonovo/projects/mathvis/build/linux/x64/debug/plugins/rust_lib_mathvis/cargokit_build/debug/deps/libfutures_macro-fc295dc9df4388cc.so: /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/lib.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/executor.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/join.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/select.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/stream_select.rs
+
+/home/joaonovo/projects/mathvis/build/linux/x64/debug/plugins/rust_lib_mathvis/cargokit_build/debug/deps/futures_macro-fc295dc9df4388cc.d: /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/lib.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/executor.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/join.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/select.rs /home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/stream_select.rs
+
+/home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/lib.rs:
+/home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/executor.rs:
+/home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/join.rs:
+/home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/select.rs:
+/home/joaonovo/.cargo/registry/src/index.crates.io-6f17d22bba15001f/futures-macro-0.3.29/src/stream_select.rs:

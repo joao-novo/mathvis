@@ -1,0 +1,1 @@
+/home/joaonovo/projects/mathvis/build/linux/x64/debug/plugins/rust_lib_mathvis/cargokit_build/x86_64-unknown-linux-gnu/debug/librust_lib_mathvis.a: /home/joaonovo/projects/mathvis/rust/src/api/mod.rs /home/joaonovo/projects/mathvis/rust/src/api/simple.rs /home/joaonovo/projects/mathvis/rust/src/frb_generated.rs /home/joaonovo/projects/mathvis/rust/src/lib.rs
