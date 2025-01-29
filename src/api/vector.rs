@@ -1,17 +1,36 @@
-use super::{motion::Move, point::Point2DLike, screen::Screen};
+use super::{motion::Move, point::Point2DLike, screen::Screen2D};
+use std::ops::Add;
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Vector2D<'a> {
-    context: &'a Screen,
+    context: &'a Screen2D,
     x: f64,
     y: f64,
 }
 
+impl<'a> Vector2D<'a> {
+    pub fn dot(&self, rhs: Self) -> f64 {
+        self.x * rhs.x + self.y * rhs.y
+    }
+}
+
+impl<'a> Add for Vector2D<'a> {
+    type Output = Result<Vector2D<'a>, &'a str>;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        if let Some(vector) = Self::new(self.context, self.x + rhs.x, self.y + rhs.y) {
+            return Ok(vector);
+        };
+        Err("out of bounds")
+    }
+}
+
 impl<'a> Point2DLike<'a> for Vector2D<'a> {
-    fn is_within_context(context: &'a Screen, x: f64, y: f64) -> bool {
+    fn is_within_context(context: &'a Screen2D, x: f64, y: f64) -> bool {
         x >= 0. && x < context.width() as f64 && y >= 0. && y < context.height() as f64
     }
 
-    fn new(context: &'a Screen, x: f64, y: f64) -> Option<Self>
+    fn new(context: &'a Screen2D, x: f64, y: f64) -> Option<Self>
     where
         Self: Sized,
     {
@@ -21,7 +40,7 @@ impl<'a> Point2DLike<'a> for Vector2D<'a> {
         None
     }
 
-    fn origin(context: &'a Screen) -> Self {
+    fn origin(context: &'a Screen2D) -> Self {
         Self::new(context, 0.0, 0.0).unwrap()
     }
 
@@ -39,8 +58,8 @@ impl<'a> Move for Vector2D<'a> {
     where
         Self: Sized,
     {
-        if let Some(point) = Self::new(self.context, x, y) {
-            return Ok(point);
+        if let Some(vector) = Self::new(self.context, x, y) {
+            return Ok(vector);
         }
         Err("out of bounds")
     }
