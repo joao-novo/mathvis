@@ -1,73 +1,81 @@
-use super::{motion::Move, screen::Screen2D, vector::Vector2D};
-
-pub trait Point2DLike<'a> {
-    fn is_within_context(context: &'a Screen2D, x: f64, y: f64) -> bool;
-    fn new(context: &'a Screen2D, x: f64, y: f64) -> Option<Self>
+pub trait PointLike {
+    fn new(values: Vec<f64>) -> Option<Self>
     where
         Self: Sized;
-    fn origin(context: &'a Screen2D) -> Self;
-    fn x(&self) -> f64;
-    fn y(&self) -> f64;
+    fn origin(dimensions: u32) -> Option<Self>
+    where
+        Self: Sized;
+    fn value(&self) -> &Vec<f64>;
+
+    fn get_dimensions(&self) -> usize;
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Point2D<'a> {
-    context: &'a Screen2D,
-    x: f64,
-    y: f64,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Point {
+    values: Vec<f64>,
+    //TODO implement context for 2d and 3d points
+    context: Option<i32>,
 }
 
-impl<'a> Point2D<'a> {
-    pub fn distance_to(&self, other: &Point2D) -> f64 {
-        let dx = self.x - other.x;
-        let dy = self.y - other.y;
-        (dx * dx + dy * dy).sqrt()
-    }
+impl Point {
+    // pub fn distance_to(&self, other: &Point) -> f64 {
+    //     let dx = self.x - other.x;
+    //     let dy = self.y - other.y;
+    //     (dx * dx + dy * dy).sqrt()
+    // }
 
-    pub fn add_vector(&self, vec: Vector2D) -> Result<Self, &str>
+    // pub fn add_vector(&self, vec: Vector2D) -> Result<Self, &str>
+    // where
+    //     Self: Sized,
+    // {
+    //     if let Some(point) = Self::new(self.context, self.x + vec.x(), self.y + vec.y()) {
+    //         return Ok(point);
+    //     }
+    //     Err("out of bounds")
+    // }
+}
+
+impl PointLike for Point {
+    fn new(values: Vec<f64>) -> Option<Self>
     where
         Self: Sized,
     {
-        if let Some(point) = Self::new(self.context, self.x + vec.x(), self.y + vec.y()) {
-            return Ok(point);
+        if values.is_empty() {
+            return None;
         }
-        Err("out of bounds")
+        Some(Point {
+            values,
+            context: None,
+        })
+    }
+
+    fn origin(dimensions: u32) -> Option<Self> {
+        if dimensions == 0 {
+            return None;
+        }
+        Some(Point {
+            values: vec![0.0; dimensions as usize],
+            context: None,
+        })
+    }
+
+    fn value(&self) -> &Vec<f64> {
+        &self.values
+    }
+
+    fn get_dimensions(&self) -> usize {
+        return self.values.len();
     }
 }
 
-impl<'a> Point2DLike<'a> for Point2D<'a> {
-    fn is_within_context(context: &'a Screen2D, x: f64, y: f64) -> bool {
-        x >= 0. && x < context.width() as f64 && y >= 0. && y < context.height() as f64
-    }
-
-    fn new(context: &'a Screen2D, x: f64, y: f64) -> Option<Point2D<'a>> {
-        if Self::is_within_context(context, x, y) {
-            return Some(Point2D { context, x, y });
-        }
-        None
-    }
-
-    fn origin(context: &'a Screen2D) -> Self {
-        Self::new(context, 0.0, 0.0).unwrap()
-    }
-
-    fn x(&self) -> f64 {
-        self.x
-    }
-
-    fn y(&self) -> f64 {
-        self.y
-    }
-}
-
-impl<'a> Move for Point2D<'a> {
-    fn move_to(&self, x: f64, y: f64) -> Result<Self, &str>
-    where
-        Self: Sized,
-    {
-        if let Some(point) = Self::new(self.context, x, y) {
-            return Ok(point);
-        }
-        Err("out of bounds")
-    }
-}
+// impl<'a> Move for Point2D<'a> {
+//     fn move_to(&self, x: f64, y: f64) -> Result<Self, &str>
+//     where
+//         Self: Sized,
+//     {
+//         if let Some(point) = Self::new(self.context, x, y) {
+//             return Ok(point);
+//         }
+//         Err("out of bounds")
+//     }
+// }
