@@ -1,3 +1,5 @@
+use super::vector::Vector;
+
 pub trait PointLike {
     fn new(values: Vec<f64>) -> Option<Self>
     where
@@ -18,21 +20,35 @@ pub struct Point {
 }
 
 impl Point {
-    // pub fn distance_to(&self, other: &Point) -> f64 {
-    //     let dx = self.x - other.x;
-    //     let dy = self.y - other.y;
-    //     (dx * dx + dy * dy).sqrt()
-    // }
+    pub fn distance_to(&self, other: &Point) -> Result<f64, &str> {
+        if self.get_dimensions() != other.get_dimensions() {
+            return Err("wrong dimensions");
+        }
+        Ok(self
+            .values
+            .iter()
+            .zip(other.values.iter())
+            .fold(0.0, |acc, (a, b)| acc + (a - b) * (a - b))
+            .sqrt())
+    }
 
-    // pub fn add_vector(&self, vec: Vector2D) -> Result<Self, &str>
-    // where
-    //     Self: Sized,
-    // {
-    //     if let Some(point) = Self::new(self.context, self.x + vec.x(), self.y + vec.y()) {
-    //         return Ok(point);
-    //     }
-    //     Err("out of bounds")
-    // }
+    pub fn add_vector(&self, vec: Vector) -> Result<Self, &str>
+    where
+        Self: Sized,
+    {
+        if self.get_dimensions() != vec.get_dimensions() {
+            return Err("wrong dimensions");
+        }
+        Ok(Point {
+            values: self
+                .values
+                .iter()
+                .zip(vec.value().iter())
+                .map(|(a, b)| a + b)
+                .collect(),
+            context: None,
+        })
+    }
 }
 
 impl PointLike for Point {
@@ -64,7 +80,7 @@ impl PointLike for Point {
     }
 
     fn get_dimensions(&self) -> usize {
-        return self.values.len();
+        self.values.len()
     }
 }
 
