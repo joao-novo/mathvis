@@ -1,86 +1,90 @@
-use std::ops::Range;
+use super::{point::PointLike, util::in_axis_range};
 
-pub trait Screen2DLike {
-    fn x_axis(&self) -> &Range<i32>;
-    fn y_axis(&self) -> &Range<i32>;
+pub trait ScreenLike {
+    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str>;
+    fn x_axis(&self) -> (f64, f64);
+    fn y_axis(&self) -> (f64, f64);
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Screen2D {
-    x_axis: Range<i32>,
-    y_axis: Range<i32>,
+    x_axis: (f64, f64),
+    y_axis: (f64, f64),
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Screen3D {
-    x_axis: Range<i32>,
-    y_axis: Range<i32>,
-    z_axis: Range<i32>,
+    x_axis: (f64, f64),
+    y_axis: (f64, f64),
+    z_axis: (f64, f64),
 }
 
 impl Screen2D {
-    pub fn new((xstart, xend): (i32, i32), (ystart, yend): (i32, i32)) -> Option<Self> {
+    pub fn new((xstart, xend): (f64, f64), (ystart, yend): (f64, f64)) -> Option<Self> {
         if xstart < xend && ystart < yend {
             return Some(Screen2D {
-                x_axis: Range {
-                    start: xstart,
-                    end: xend,
-                },
-                y_axis: Range {
-                    start: ystart,
-                    end: yend,
-                },
+                x_axis: (xstart, xend),
+                y_axis: (ystart, yend),
             });
         }
         None
     }
 }
 
-impl Screen2DLike for Screen2D {
-    fn x_axis(&self) -> &Range<i32> {
-        &self.x_axis
+impl ScreenLike for Screen2D {
+    fn x_axis(&self) -> (f64, f64) {
+        self.x_axis
     }
 
-    fn y_axis(&self) -> &Range<i32> {
-        &self.y_axis
+    fn y_axis(&self) -> (f64, f64) {
+        self.y_axis
+    }
+
+    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
+        match object.get_dimensions() {
+            2 => Ok(in_axis_range(object.value()[0], self.x_axis)
+                && in_axis_range(object.value()[1], self.y_axis)),
+            _ => Err("wrong dimensions"),
+        }
     }
 }
 
 impl Screen3D {
     pub fn new(
-        (xstart, xend): (i32, i32),
-        (ystart, yend): (i32, i32),
-        (zstart, zend): (i32, i32),
+        (xstart, xend): (f64, f64),
+        (ystart, yend): (f64, f64),
+        (zstart, zend): (f64, f64),
     ) -> Option<Self> {
-        if xstart < xend && ystart < yend {
+        if xstart < xend && ystart < yend && zstart < zend {
             return Some(Screen3D {
-                x_axis: Range {
-                    start: xstart,
-                    end: xend,
-                },
-                y_axis: Range {
-                    start: ystart,
-                    end: yend,
-                },
-                z_axis: Range {
-                    start: zstart,
-                    end: zend,
-                },
+                x_axis: (xstart, xend),
+                y_axis: (ystart, yend),
+                z_axis: (zstart, zend),
             });
         }
         None
     }
 
-    pub fn z_axis(&self) -> &Range<i32> {
-        &self.z_axis
+    pub fn z_axis(&self) -> (f64, f64) {
+        self.z_axis
     }
 }
 
-impl Screen2DLike for Screen3D {
-    fn x_axis(&self) -> &Range<i32> {
-        &self.x_axis
+impl ScreenLike for Screen3D {
+    fn x_axis(&self) -> (f64, f64) {
+        self.x_axis
     }
 
-    fn y_axis(&self) -> &Range<i32> {
-        &self.y_axis
+    fn y_axis(&self) -> (f64, f64) {
+        self.y_axis
+    }
+
+    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
+        match object.get_dimensions() {
+            3 => Ok(in_axis_range(object.value()[0], self.x_axis)
+                && in_axis_range(object.value()[0], self.y_axis)
+                && in_axis_range(object.value()[2], self.z_axis)),
+            _ => Err("wrong dimensions"),
+        }
     }
 }
