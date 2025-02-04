@@ -1,3 +1,7 @@
+use std::ops::Add;
+
+use rand::{rng, Rng};
+
 use super::vector::Vector;
 
 pub trait PointLike {
@@ -5,6 +9,9 @@ pub trait PointLike {
     where
         Self: Sized;
     fn origin(dimensions: u32) -> Option<Self>
+    where
+        Self: Sized;
+    fn random(dimensions: u32) -> Option<Self>
     where
         Self: Sized;
     fn value(&self) -> &Vec<f64>;
@@ -15,8 +22,6 @@ pub trait PointLike {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
     values: Vec<f64>,
-    //TODO implement context for 2d and 3d points
-    context: Option<i32>,
 }
 
 impl Point {
@@ -31,13 +36,14 @@ impl Point {
             .fold(0.0, |acc, (a, b)| acc + (a - b) * (a - b))
             .sqrt())
     }
+}
 
-    pub fn add_vector(&self, vec: Vector) -> Result<Self, &str>
-    where
-        Self: Sized,
-    {
+impl Add<Vector> for Point {
+    type Output = Result<Point, String>;
+
+    fn add(self, vec: Vector) -> Self::Output {
         if self.get_dimensions() != vec.get_dimensions() {
-            return Err("wrong dimensions");
+            return Err(String::from("wrong dimensions"));
         }
         Ok(Point {
             values: self
@@ -46,7 +52,6 @@ impl Point {
                 .zip(vec.value().iter())
                 .map(|(a, b)| a + b)
                 .collect(),
-            context: None,
         })
     }
 }
@@ -59,10 +64,7 @@ impl PointLike for Point {
         if values.is_empty() {
             return None;
         }
-        Some(Point {
-            values,
-            context: None,
-        })
+        Some(Point { values })
     }
 
     fn origin(dimensions: u32) -> Option<Self> {
@@ -71,7 +73,6 @@ impl PointLike for Point {
         }
         Some(Point {
             values: vec![0.0; dimensions as usize],
-            context: None,
         })
     }
 
@@ -81,6 +82,20 @@ impl PointLike for Point {
 
     fn get_dimensions(&self) -> usize {
         self.values.len()
+    }
+
+    fn random(dimensions: u32) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        if dimensions == 0 {
+            return None;
+        }
+
+        let mut rng = rng();
+        Some(Point {
+            values: (0..dimensions).map(|_| rng.random()).collect(),
+        })
     }
 }
 
