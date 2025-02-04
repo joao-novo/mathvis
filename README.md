@@ -6,17 +6,38 @@ Math visualizer and animation creator built in Rust with Flutter.
 
 ## Backend
 
-- Basic Vector and Matrix API (generalized, not meant to be visualized): INTEGRATION TESTED [ ]
-  - Points: IMPLEMENTED [x] DOCUMENTED [ ] TESTED [x]
-  - Vectors: IMPLEMENTED [x] DOCUMENTED [ ] TESTED [x]
-  - Matrices: IMPLEMENTED [x] DOCUMENTED [ ] TESTED [x]
-- CLI for generating video animations: INTEGRATION TESTED [ ]
-  - Clap CLI: IMPLEMENTED [ ] DOCUMENTED [ ] TESTED [ ]
-  - Logic for generating animation: IMPLEMENTED [ ] DOCUMENTED [ ] TESTED [ ]
-- API for displaying and moving objects in a screen: INTEGRATION TESTED [ ]
-  - Basic Movement: IMPLEMENTED [ ] DOCUMENTED [ ] TESTED [ ]
-  - More complex operations: IMPLEMENTED [ ] DOCUMENTED [ ] TESTED [ ]
-- Drawing objects on a canvas: INTEGRATION TESTED [ ]
+- [ ] __Basic Vector and Matrix API__:
+  - __Points__:
+    - [x] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [x] TESTED
+  - __Vectors__:
+    - [x] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [x] TESTED
+  - __Matrices__:
+    - [x] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [x] TESTED
+- [ ] __CLI for generating video animations__:
+  - __Clap CLI__:
+    - [ ] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [ ] TESTED
+  - __Logic for generating animation__:
+    - [ ] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [ ] TESTED
+- [ ] __API for displaying and moving objects in a screen__:
+  - __Basic Movement__:
+    - [ ] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [ ] TESTED
+  - __More complex operations__:
+    - [ ] IMPLEMENTED
+    - [ ] DOCUMENTED
+    - [ ] TESTED
+- [ ] __Drawing objects on a canvas__:
   - ...
 
 ## UI
