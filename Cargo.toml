@@ -1,5 +1,5 @@
 [package]
-name = "rust_lib_mathvis"
+name = "mathvis"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,5 +7,12 @@ edition = "2021"
 crate-type = ["cdylib", "staticlib"]
 
 [dependencies]
+ab_glyph = "0.2.29"
+clap = { version = "4.5.28", features = ["derive"] }
+ffmpeg-next = "7.1.0"
 flutter_rust_bridge = "=2.7.1"
+imageproc = "0.25.0"
 rand = "0.9.0"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(frb_expand)'] }
