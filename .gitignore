@@ -1,11 +1,11 @@
-/target
-/Cargo.lock
-/config.stamp
-/Makefile
-/config.mk
-/src/doc/build
-/src/etc/*.pyc
-/src/registry/target
+rust/target
+rust/Cargo.lock
+rust/config.stamp
+rust/Makefile
+rust/config.mk
+rust/src/doc/build
+rust/src/etc/*.pyc
+rust/src/registry/target
 rustc
 __pycache__
 .idea/
@@ -164,3 +164,6 @@ app.*.symbols
 .python-version
 .gclient_previous_custom_vars
 .gclient_previous_sync_commits
+
+rust/output
+rust/src/output
