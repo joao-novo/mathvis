@@ -5,7 +5,7 @@ use rand::{rng, Rng};
 use super::vector::Vector;
 
 pub trait PointLike {
-    fn new(values: Vec<f64>) -> Option<Self>
+    fn new(values: Vec<f32>) -> Option<Self>
     where
         Self: Sized;
     fn origin(dimensions: u32) -> Option<Self>
@@ -14,18 +14,18 @@ pub trait PointLike {
     fn random(dimensions: u32) -> Option<Self>
     where
         Self: Sized;
-    fn value(&self) -> &Vec<f64>;
+    fn value(&self) -> &Vec<f32>;
 
     fn get_dimensions(&self) -> usize;
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
-    values: Vec<f64>,
+    values: Vec<f32>,
 }
 
 impl Point {
-    pub fn distance_to(&self, other: &Point) -> Result<f64, &str> {
+    pub fn distance_to(&self, other: &Point) -> Result<f32, &str> {
         if self.get_dimensions() != other.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -57,7 +57,7 @@ impl Add<Vector> for Point {
 }
 
 impl PointLike for Point {
-    fn new(values: Vec<f64>) -> Option<Self>
+    fn new(values: Vec<f32>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -76,7 +76,7 @@ impl PointLike for Point {
         })
     }
 
-    fn value(&self) -> &Vec<f64> {
+    fn value(&self) -> &Vec<f32> {
         &self.values
     }
 
@@ -100,7 +100,7 @@ impl PointLike for Point {
 }
 
 // impl<'a> Move for Point2D<'a> {
-//     fn move_to(&self, x: f64, y: f64) -> Result<Self, &str>
+//     fn move_to(&self, x: f32, y: f32) -> Result<Self, &str>
 //     where
 //         Self: Sized,
 //     {

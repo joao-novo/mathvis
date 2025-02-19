@@ -4,11 +4,11 @@ use rand::{rng, Rng};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Matrix {
-    values: Vec<Vec<f64>>,
+    values: Vec<Vec<f32>>,
 }
 
 impl Matrix {
-    pub fn new(values: Vec<Vec<f64>>) -> Option<Self> {
+    pub fn new(values: Vec<Vec<f32>>) -> Option<Self> {
         let first_length = values.first().map_or(0, |row| row.len());
         if values.len() == 0
             || first_length == 0
@@ -39,7 +39,7 @@ impl Matrix {
             return None;
         }
         let mut rng = rng();
-        let vals: Vec<Vec<f64>> = (0..rows)
+        let vals: Vec<Vec<f32>> = (0..rows)
             .map(|_| (0..cols).map(|_| rng.random()).collect())
             .collect();
         Some(Matrix { values: vals })
@@ -49,7 +49,7 @@ impl Matrix {
         (self.values.len(), self.values[0].len())
     }
 
-    pub fn determinant(&self) -> Result<f64, &str> {
+    pub fn determinant(&self) -> Result<f32, &str> {
         if self.dimensions().0 != self.dimensions().1 {
             return Err("must be a square matrix");
         }
@@ -61,9 +61,9 @@ impl Matrix {
         let mut curr_determinant = 0.0;
         for col in 0..size {
             let value = self.values[0][col];
-            let mut sub_values: Vec<Vec<f64>> = Vec::new();
+            let mut sub_values: Vec<Vec<f32>> = Vec::new();
             for row in 1..size {
-                let mut sub_row_values: Vec<f64> = Vec::new();
+                let mut sub_row_values: Vec<f32> = Vec::new();
                 for collumn in 0..size {
                     if collumn != col {
                         sub_row_values.push(self.values[row][collumn]);
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn test_empty() {
-        let vals: Vec<Vec<f64>> = Vec::new();
+        let vals: Vec<Vec<f32>> = Vec::new();
         assert!(Matrix::new(vals) == None);
     }
 
