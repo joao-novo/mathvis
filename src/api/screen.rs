@@ -2,25 +2,25 @@ use super::{point::PointLike, util::in_axis_range};
 
 pub trait ScreenLike {
     fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str>;
-    fn x_axis(&self) -> (f64, f64);
-    fn y_axis(&self) -> (f64, f64);
+    fn x_axis(&self) -> (f32, f32);
+    fn y_axis(&self) -> (f32, f32);
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Screen2D {
-    x_axis: (f64, f64),
-    y_axis: (f64, f64),
+    x_axis: (f32, f32),
+    y_axis: (f32, f32),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Screen3D {
-    x_axis: (f64, f64),
-    y_axis: (f64, f64),
-    z_axis: (f64, f64),
+    x_axis: (f32, f32),
+    y_axis: (f32, f32),
+    z_axis: (f32, f32),
 }
 
 impl Screen2D {
-    pub fn new((xstart, xend): (f64, f64), (ystart, yend): (f64, f64)) -> Option<Self> {
+    pub fn new((xstart, xend): (f32, f32), (ystart, yend): (f32, f32)) -> Option<Self> {
         if xstart < xend && ystart < yend {
             return Some(Screen2D {
                 x_axis: (xstart, xend),
@@ -29,14 +29,27 @@ impl Screen2D {
         }
         None
     }
+
+    pub fn change_dimensions(&mut self, (xstart, xend): (f32, f32), (ystart, yend): (f32, f32)) {
+        if xstart < xend && ystart < yend {
+            self.x_axis = (xstart, xend);
+            self.y_axis = (ystart, yend);
+        }
+    }
+
+    pub fn get_center_pixels(&self, (width, height): (f32, f32)) -> (f32, f32) {
+        let ratio_x = self.x_axis.0.abs() / (self.x_axis.1.abs() + self.x_axis.0.abs());
+        let ratio_y = self.y_axis.1.abs() / (self.y_axis.1.abs() + self.y_axis.0.abs());
+        (width * ratio_x, height * ratio_y)
+    }
 }
 
 impl ScreenLike for Screen2D {
-    fn x_axis(&self) -> (f64, f64) {
+    fn x_axis(&self) -> (f32, f32) {
         self.x_axis
     }
 
-    fn y_axis(&self) -> (f64, f64) {
+    fn y_axis(&self) -> (f32, f32) {
         self.y_axis
     }
 
@@ -51,9 +64,9 @@ impl ScreenLike for Screen2D {
 
 impl Screen3D {
     pub fn new(
-        (xstart, xend): (f64, f64),
-        (ystart, yend): (f64, f64),
-        (zstart, zend): (f64, f64),
+        (xstart, xend): (f32, f32),
+        (ystart, yend): (f32, f32),
+        (zstart, zend): (f32, f32),
     ) -> Option<Self> {
         if xstart < xend && ystart < yend && zstart < zend {
             return Some(Screen3D {
@@ -65,17 +78,17 @@ impl Screen3D {
         None
     }
 
-    pub fn z_axis(&self) -> (f64, f64) {
+    pub fn z_axis(&self) -> (f32, f32) {
         self.z_axis
     }
 }
 
 impl ScreenLike for Screen3D {
-    fn x_axis(&self) -> (f64, f64) {
+    fn x_axis(&self) -> (f32, f32) {
         self.x_axis
     }
 
-    fn y_axis(&self) -> (f64, f64) {
+    fn y_axis(&self) -> (f32, f32) {
         self.y_axis
     }
 
@@ -86,5 +99,17 @@ impl ScreenLike for Screen3D {
                 && in_axis_range(object.value()[2], self.z_axis)),
             _ => Err("wrong dimensions"),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_center() {
+        let screen = Screen2D::new((-10.0, 10.0), (-10.0, 15.0)).unwrap();
+        println!("{:?}", screen.get_center_pixels((1920.0, 1080.0)));
+        assert!(screen.get_center_pixels((1920.0, 1080.0)) == (960.0, 432.0));
     }
 }

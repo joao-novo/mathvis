@@ -5,11 +5,11 @@ use std::ops::{Add, Mul};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Vector {
-    values: Vec<f64>,
+    values: Vec<f32>,
 }
 
 impl Vector {
-    pub fn dot(&self, rhs: Self) -> Result<f64, &str> {
+    pub fn dot(&self, rhs: Self) -> Result<f32, &str> {
         if self.get_dimensions() != rhs.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -33,7 +33,7 @@ impl Add for Vector {
                 .values
                 .iter()
                 .zip(rhs.values.iter())
-                .map(|(a, b): (&f64, &f64)| a + b)
+                .map(|(a, b): (&f32, &f32)| a + b)
                 .collect(),
         })
     }
@@ -57,7 +57,7 @@ impl Mul for Vector {
     }
 }
 
-impl Mul<Vector> for f64 {
+impl Mul<Vector> for f32 {
     type Output = Vector;
 
     fn mul(self, rhs: Vector) -> Self::Output {
@@ -68,7 +68,7 @@ impl Mul<Vector> for f64 {
 }
 
 impl PointLike for Vector {
-    fn new(values: Vec<f64>) -> Option<Self>
+    fn new(values: Vec<f32>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -90,7 +90,7 @@ impl PointLike for Vector {
         })
     }
 
-    fn value(&self) -> &Vec<f64> {
+    fn value(&self) -> &Vec<f32> {
         &self.values
     }
 
@@ -114,7 +114,7 @@ impl PointLike for Vector {
 }
 
 // impl<'a> Move for Vector2D<'a> {
-//     fn move_to(&self, x: f64, y: f64) -> Result<Self, &str>
+//     fn move_to(&self, x: f32, y: f32) -> Result<Self, &str>
 //     where
 //         Self: Sized,
 //     {
