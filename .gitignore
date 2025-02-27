@@ -167,3 +167,4 @@ app.*.symbols
 
 rust/output
 rust/src/output
+output

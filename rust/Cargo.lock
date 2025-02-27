@@ -995,6 +995,7 @@ dependencies = [
  "ffmpeg-next",
  "flutter_rust_bridge",
  "imageproc",
+ "num-traits",
  "rand 0.9.0",
 ]
 
