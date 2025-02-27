@@ -1,7 +1,10 @@
-use super::{point::PointLike, util::in_axis_range};
+use super::{
+    point::{Point, PointLike},
+    util::in_axis_range,
+};
 
 pub trait ScreenLike {
-    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str>;
+    // fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str>;
     fn x_axis(&self) -> (f32, f32);
     fn y_axis(&self) -> (f32, f32);
 }
@@ -37,10 +40,10 @@ impl Screen2D {
         }
     }
 
-    pub fn get_center_pixels(&self, (width, height): (f32, f32)) -> (f32, f32) {
+    pub fn get_center_pixels(&self, res: Point<f32>) -> (f32, f32) {
         let ratio_x = self.x_axis.0.abs() / (self.x_axis.1.abs() + self.x_axis.0.abs());
         let ratio_y = self.y_axis.1.abs() / (self.y_axis.1.abs() + self.y_axis.0.abs());
-        (width * ratio_x, height * ratio_y)
+        (res.values()[0] * ratio_x, res.values()[1] * ratio_y)
     }
 }
 
@@ -53,13 +56,13 @@ impl ScreenLike for Screen2D {
         self.y_axis
     }
 
-    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
-        match object.get_dimensions() {
-            2 => Ok(in_axis_range(object.value()[0], self.x_axis)
-                && in_axis_range(object.value()[1], self.y_axis)),
-            _ => Err("wrong dimensions"),
-        }
-    }
+    // fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
+    //     match object.get_dimensions() {
+    //         2 => Ok(in_axis_range(object.value()[0], self.x_axis)
+    //             && in_axis_range(object.value()[1], self.y_axis)),
+    //         _ => Err("wrong dimensions"),
+    //     }
+    // }
 }
 
 impl Screen3D {
@@ -92,14 +95,14 @@ impl ScreenLike for Screen3D {
         self.y_axis
     }
 
-    fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
-        match object.get_dimensions() {
-            3 => Ok(in_axis_range(object.value()[0], self.x_axis)
-                && in_axis_range(object.value()[0], self.y_axis)
-                && in_axis_range(object.value()[2], self.z_axis)),
-            _ => Err("wrong dimensions"),
-        }
-    }
+    // fn can_contain<T: PointLike>(&self, object: &T) -> Result<bool, &str> {
+    //     match object.get_dimensions() {
+    //         3 => Ok(in_axis_range(object.value()[0], self.x_axis)
+    //             && in_axis_range(object.value()[0], self.y_axis)
+    //             && in_axis_range(object.value()[2], self.z_axis)),
+    //         _ => Err("wrong dimensions"),
+    //     }
+    // }
 }
 
 #[cfg(test)]
@@ -109,7 +112,12 @@ mod tests {
     #[test]
     fn test_center() {
         let screen = Screen2D::new((-10.0, 10.0), (-10.0, 15.0)).unwrap();
-        println!("{:?}", screen.get_center_pixels((1920.0, 1080.0)));
-        assert!(screen.get_center_pixels((1920.0, 1080.0)) == (960.0, 432.0));
+        println!(
+            "{:?}",
+            screen.get_center_pixels(Point::new(vec![1920.0, 1080.0]).unwrap())
+        );
+        assert!(
+            screen.get_center_pixels(Point::new(vec![1920.0, 1080.0]).unwrap()) == (960.0, 648.0)
+        );
     }
 }
