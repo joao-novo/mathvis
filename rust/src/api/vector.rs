@@ -1,15 +1,28 @@
-use rand::{rng, Rng};
+//! Module containing an n-dimensional vector structure and its respective operations.
+//! Will eventually be used with a special wrapper for displayable vectors
+#![warn(missing_docs)]
+use rand::{
+    distr::{Distribution, StandardUniform},
+    rng, Rng,
+};
 
-use super::point::PointLike;
+use super::{point::PointLike, util::Number};
 use std::ops::{Add, Mul};
 
+/// An n-dimensional vector that allows for different vector operations.
+///
+/// Vector implements [`PointLike`](trait.PointLike.html), essentially making it behave like a point with special vector-specific operations (dot product, multiplication with matrices).
 #[derive(Debug, PartialEq, Clone)]
-pub struct Vector {
-    values: Vec<f32>,
+pub struct Vector<T: Number> {
+    values: Vec<T>,
 }
 
-impl Vector {
-    pub fn dot(&self, rhs: Self) -> Result<f32, &str> {
+impl<T> Vector<T>
+where
+    T: Number,
+    Vector<T>: PointLike<T>,
+{
+    pub fn dot(&self, rhs: Self) -> Result<T, &str> {
         if self.get_dimensions() != rhs.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -17,14 +30,20 @@ impl Vector {
             .values
             .iter()
             .zip(rhs.values.iter())
-            .fold(0.0, |acc, (a, b)| acc + a * b))
+            .fold(T::zero(), |acc, (a, b)| acc + a.clone() * b.clone()))
     }
 }
 
-impl Add for Vector {
-    type Output = Result<Vector, String>;
+impl<T, U> Add<Vector<U>> for Vector<T>
+where
+    T: Number + Add<U, Output = U>,
+    U: Number,
+    Vector<T>: PointLike<T>,
+    Vector<U>: PointLike<U>,
+{
+    type Output = Result<Vector<U>, String>;
 
-    fn add(self, rhs: Self) -> Self::Output {
+    fn add(self, rhs: Vector<U>) -> Self::Output {
         if self.get_dimensions() != rhs.get_dimensions() {
             return Err(String::from("wrong dimensions"));
         }
@@ -33,23 +52,29 @@ impl Add for Vector {
                 .values
                 .iter()
                 .zip(rhs.values.iter())
-                .map(|(a, b): (&f32, &f32)| a + b)
+                .map(|(a, b): (&T, &U)| a.clone() + b.clone())
                 .collect(),
         })
     }
 }
 
-impl Mul for Vector {
-    type Output = Result<Vector, String>;
+impl<T, U> Mul<Vector<U>> for Vector<T>
+where
+    T: Number + Mul<U, Output = U>,
+    U: Number,
+    Vector<T>: PointLike<T>,
+    Vector<U>: PointLike<U>,
+{
+    type Output = Result<Vector<U>, String>;
 
-    fn mul(self, rhs: Self) -> Self::Output {
+    fn mul(self, rhs: Vector<U>) -> Self::Output {
         if self.get_dimensions() != rhs.get_dimensions() || self.get_dimensions() != 3 {
             return Err(String::from("wrong dimensions"));
         }
         let (l1, l2, l3) = (
-            self.value()[1] * rhs.value()[2] - self.value()[2] * rhs.value()[1],
-            self.value()[2] * rhs.value()[0] - self.value()[0] * rhs.value()[2],
-            self.value()[0] * rhs.value()[1] - self.value()[1] * rhs.value()[0],
+            self.values()[1] * rhs.values()[2] - self.values()[2] * rhs.values()[1],
+            self.values()[2] * rhs.values()[0] - self.values()[0] * rhs.values()[2],
+            self.values()[0] * rhs.values()[1] - self.values()[1] * rhs.values()[0],
         );
         Ok(Vector {
             values: vec![l1, l2, l3],
@@ -57,18 +82,26 @@ impl Mul for Vector {
     }
 }
 
-impl Mul<Vector> for f32 {
-    type Output = Vector;
+impl<T, U> Mul<U> for Vector<T>
+where
+    T: Number,
+    U: Number + Mul<T, Output = U>,
+{
+    type Output = Vector<U>;
 
-    fn mul(self, rhs: Vector) -> Self::Output {
+    fn mul(self, scalar: U) -> Self::Output {
         Vector {
-            values: rhs.values.iter().map(|val| self * val).collect(),
+            values: self.values.iter().map(|val| scalar * val.clone()).collect(),
         }
     }
 }
 
-impl PointLike for Vector {
-    fn new(values: Vec<f32>) -> Option<Self>
+impl<T> PointLike<T> for Vector<T>
+where
+    T: Number,
+    StandardUniform: Distribution<T>,
+{
+    fn new(values: Vec<T>) -> Option<Self>
     where
         Self: Sized,
     {
@@ -86,11 +119,11 @@ impl PointLike for Vector {
             return None;
         }
         Some(Vector {
-            values: vec![0.0; dimensions as usize],
+            values: vec![T::zero(); dimensions as usize],
         })
     }
 
-    fn value(&self) -> &Vec<f32> {
+    fn values(&self) -> &Vec<T> {
         &self.values
     }
 
@@ -149,7 +182,7 @@ mod tests {
         let a = Vector {
             values: vec![1.0, 2.0, 3.0],
         };
-        let b = Vector::random(2).unwrap();
+        let b = Vector::<f32>::random(2).unwrap();
         assert!(a + b == Err(String::from("wrong dimensions")));
     }
 
@@ -162,9 +195,9 @@ mod tests {
 
     #[test]
     fn test_cross() {
-        let a = Vector::new(vec![1.0, 2.0, 3.0]).unwrap();
-        let b = Vector::new(vec![3.0, 2.0, 1.0]).unwrap();
-        let c = Vector::new(vec![-4.0, 8.0, -4.0]).unwrap();
+        let a: Vector<f32> = Vector::new(vec![1.0, 2.0, 3.0]).unwrap();
+        let b: Vector<f32> = Vector::new(vec![3.0, 2.0, 1.0]).unwrap();
+        let c: Vector<f32> = Vector::new(vec![-4.0, 8.0, -4.0]).unwrap();
         assert!(a * b == Ok(c));
     }
 }
