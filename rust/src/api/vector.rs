@@ -12,7 +12,7 @@ use std::ops::{Add, Mul};
 /// An n-dimensional vector that allows for different vector operations.
 ///
 /// Vector implements [`PointLike`](trait.PointLike.html), essentially making it behave like a point with special vector-specific operations (dot product, multiplication with matrices).
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Vector<T: Number> {
     values: Vec<T>,
 }
@@ -22,7 +22,7 @@ where
     T: Number,
     Vector<T>: PointLike<T>,
 {
-    pub fn dot(&self, rhs: Self) -> Result<T, &str> {
+    pub fn dot(&self, rhs: Vector<impl Number>) -> Result<f32, &str> {
         if self.get_dimensions() != rhs.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -30,7 +30,9 @@ where
             .values
             .iter()
             .zip(rhs.values.iter())
-            .fold(T::zero(), |acc, (a, b)| acc + a.clone() * b.clone()))
+            .fold(0.0, |acc, (a, b)| {
+                acc + a.to_f32().unwrap() * b.to_f32().unwrap()
+            }))
     }
 }
 
@@ -99,7 +101,6 @@ where
 impl<T> PointLike<T> for Vector<T>
 where
     T: Number,
-    StandardUniform: Distribution<T>,
 {
     fn new(values: Vec<T>) -> Option<Self>
     where
@@ -134,6 +135,7 @@ where
     fn random(dimensions: u32) -> Option<Self>
     where
         Self: Sized,
+        StandardUniform: Distribution<T>,
     {
         if dimensions == 0 {
             return None;

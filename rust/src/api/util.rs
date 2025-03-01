@@ -1,15 +1,22 @@
-use clap::ValueEnum;
+use std::{
+    ops::Neg,
+    path::PathBuf,
+    sync::{Arc, Mutex},
+};
+
+use clap::{command, Parser, ValueEnum};
+use imageproc::image::RgbImage;
 use num_traits::{Num, ToPrimitive};
 
 use super::{
     point::{Point, PointLike},
     screen::{Screen2D, ScreenLike},
 };
-pub fn in_axis_range(val: f32, (start, end): (f32, f32)) -> bool {
-    start <= val && val <= end
+pub fn in_axis_range<T: Number>(val: T, (start, end): (f32, f32)) -> bool {
+    start <= val.to_f32().unwrap() && val.to_f32().unwrap() <= end
 }
 
-#[derive(ValueEnum, Clone, Debug)]
+#[derive(ValueEnum, Clone, Debug, PartialEq, Eq, Copy)]
 pub enum Quality {
     LOW,
     MEDIUM,
@@ -44,14 +51,22 @@ impl ToString for Quality {
     }
 }
 
-pub fn interpolate(quality: &Quality, screen: &Screen2D, (x, y): (f32, f32)) -> (f32, f32) {
+pub fn interpolate(quality: Arc<Quality>, screen: Arc<Screen2D>, (x, y): (f32, f32)) -> (f32, f32) {
     let res = quality.resolution();
     let usable_res = quality.usable();
     let center =
         screen.get_center_pixels(Point::new(vec![res.values()[0], res.values()[1]]).unwrap());
     let scaling_factor = (
-        usable_res.values()[0] / (screen.x_axis().0.abs() + screen.x_axis().1.abs()),
-        usable_res.values()[1] / (screen.y_axis().0.abs() + screen.y_axis().1.abs()),
+        usable_res.values()[0]
+            / (ScreenLike::<f32>::x_axis(&*screen).0.abs()
+                + ScreenLike::<f32>::x_axis(&*screen).1.abs())
+            .to_f32()
+            .unwrap(),
+        usable_res.values()[1]
+            / (ScreenLike::<f32>::y_axis(&*screen).0.abs()
+                + ScreenLike::<f32>::x_axis(&*screen).1.abs())
+            .to_f32()
+            .unwrap(),
     );
     (
         x * scaling_factor.0 + center.0,
@@ -59,6 +74,68 @@ pub fn interpolate(quality: &Quality, screen: &Screen2D, (x, y): (f32, f32)) -> 
     )
 }
 
-pub trait Number: Num + Clone + Copy + ToPrimitive {}
+pub trait Number:
+    Num + Clone + Copy + ToPrimitive + PartialOrd + Neg<Output = Self> + PartialEq
+{
+    fn abs(self) -> Self {
+        if self > Self::zero() {
+            return self;
+        }
+        -self
+    }
+}
 
-impl<T: Num + ToPrimitive + Copy + Clone> Number for T {}
+impl<T: Num + ToPrimitive + Copy + Clone + PartialOrd + Neg<Output = Self> + PartialEq> Number
+    for T
+{
+}
+
+#[derive(Debug, Clone)]
+pub struct Global {
+    pub(crate) quality: Arc<Quality>,
+    pub(crate) screen: Arc<Screen2D>,
+    pub(crate) current_image: Arc<Mutex<RgbImage>>,
+}
+
+impl Global {
+    pub fn new(args: Args, (xstart, xend): (f32, f32), (ystart, yend): (f32, f32)) -> Self {
+        let quality = args.quality;
+        let img = RgbImage::new(
+            quality.resolution().values()[0] as u32,
+            quality.resolution().values()[1] as u32,
+        );
+        println!(
+            "{}, {}",
+            quality.resolution().values()[0],
+            quality.resolution().values()[1]
+        );
+        let screen = Screen2D::new((xstart, xend), (ystart, yend)).unwrap();
+        Self {
+            quality: Arc::new(quality),
+            screen: Arc::new(screen),
+            current_image: Arc::new(Mutex::new(img)),
+        }
+    }
+
+    pub fn change_image(&mut self, img: &mut RgbImage) {
+        self.current_image = Arc::new(Mutex::new(img.clone()));
+    }
+}
+
+#[derive(Parser, Debug, Clone)]
+#[command(author, version, about)]
+pub struct Args {
+    pub source: String,
+
+    #[arg(long, default_value_t = 30)]
+    pub fps: u32,
+
+    #[arg(short, long, default_value_os = "../output/output.mp4")]
+    pub output: PathBuf,
+
+    #[arg(long, default_value_t = false)]
+    pub gif: bool,
+
+    #[arg(short, long, default_value_t = Quality::HIGH)]
+    pub quality: Quality,
+}

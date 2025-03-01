@@ -7,7 +7,7 @@ use rand::{
 
 use super::util::Number;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Matrix<T: Number> {
     values: Vec<Vec<T>>,
 }
@@ -15,7 +15,6 @@ pub struct Matrix<T: Number> {
 impl<T> Matrix<T>
 where
     T: Number + Neg<Output = T> + AddAssign<T>,
-    StandardUniform: Distribution<T>,
 {
     pub fn new(values: Vec<Vec<T>>) -> Option<Self> {
         let first_length = values.first().map_or(0, |row| row.len());
@@ -43,7 +42,10 @@ where
         })
     }
 
-    pub fn random_matrix((rows, cols): (usize, usize)) -> Option<Self> {
+    pub fn random_matrix((rows, cols): (usize, usize)) -> Option<Self>
+    where
+        StandardUniform: Distribution<T>,
+    {
         if rows == 0 || cols == 0 {
             return None;
         }
