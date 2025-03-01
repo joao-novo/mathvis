@@ -16,15 +16,25 @@ pub trait PointLike<T: Num + Clone + ToPrimitive> {
         Self: Sized;
     fn random(dimensions: u32) -> Option<Self>
     where
-        Self: Sized;
+        Self: Sized,
+        StandardUniform: Distribution<T>;
     fn values(&self) -> &Vec<T>;
 
     fn get_dimensions(&self) -> usize;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Point<T: Number> {
     values: Vec<T>,
+}
+
+impl<T> From<imageproc::point::Point<T>> for Point<T>
+where
+    T: Number,
+{
+    fn from(value: imageproc::point::Point<T>) -> Self {
+        Point::new(vec![value.x, value.y]).unwrap()
+    }
 }
 
 impl<T> Point<T>
@@ -74,7 +84,6 @@ where
 impl<T> PointLike<T> for Point<T>
 where
     T: Number,
-    StandardUniform: Distribution<T>,
 {
     fn new(values: Vec<T>) -> Option<Self>
     where
@@ -106,6 +115,7 @@ where
     fn random(dimensions: u32) -> Option<Self>
     where
         Self: Sized,
+        StandardUniform: Distribution<T>,
     {
         if dimensions == 0 {
             return None;
@@ -119,15 +129,3 @@ where
         })
     }
 }
-
-// impl<'a> Move for Point2D<'a> {
-//     fn move_to(&self, x: f32, y: f32) -> Result<Self, &str>
-//     where
-//         Self: Sized,
-//     {
-//         if let Some(point) = Self::new(self.context, x, y) {
-//             return Ok(point);
-//         }
-//         Err("out of bounds")
-//     }
-// }

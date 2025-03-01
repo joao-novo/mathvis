@@ -5,34 +5,19 @@ use std::{
     error::Error,
     f32::consts::PI,
     fs::{create_dir_all, remove_dir_all},
-    path::PathBuf,
     process::Command,
     sync::{Arc, Mutex},
 };
 
-use animation::{axis::draw_axis, background::fill_background, vector::draw_vector};
-use api::{point::PointLike, screen::Screen2D, util::Quality, vector::Vector};
+use animation::{axis::draw_axis, background::fill_background, show::Show2D, vector::Vector2D};
+use api::{
+    point::PointLike,
+    screen::Screen2D,
+    util::{Args, Global, Number},
+};
 use clap::Parser;
 use imageproc::image::{Rgb, RgbImage};
 use misc::thread_pool::ThreadPool;
-
-#[derive(Parser, Debug, Clone)]
-#[command(author, version, about)]
-pub struct Args {
-    source: String,
-
-    #[arg(long, default_value_t = 30)]
-    fps: u32,
-
-    #[arg(short, long, default_value_os = "../output/output.mp4")]
-    output: PathBuf,
-
-    #[arg(long, default_value_t = false)]
-    gif: bool,
-
-    #[arg(short, long, default_value_t = Quality::HIGH)]
-    quality: Quality,
-}
 
 pub fn join_frames(args: &Args, directory: &str) -> Result<(), Box<dyn Error>> {
     let codec = if args.gif {
@@ -46,6 +31,10 @@ pub fn join_frames(args: &Args, directory: &str) -> Result<(), Box<dyn Error>> {
             &args.fps.to_string(),
             "-i",
             &format!("{}/tmp/frame_%03d.png", directory),
+            "-nostats",
+            "-loglevel",
+            "0",
+            "-y",
         ])
         .args(&codec)
         .arg(args.output.to_str().ok_or("Invalid output path")?)
@@ -60,11 +49,12 @@ pub fn join_frames(args: &Args, directory: &str) -> Result<(), Box<dyn Error>> {
 }
 
 fn generate_frame(
-    args: &Arc<Args>,
-    screen: &Arc<Screen2D>,
+    args: Arc<Args>,
+    mut global: Arc<Mutex<Global>>,
     t: f32,
     i: i32,
 ) -> Result<(), Box<dyn Error>> {
+    let quality = Arc::new(args.quality);
     let white = Rgb([255, 255, 255]);
     let directory = args
         .output
@@ -76,30 +66,27 @@ fn generate_frame(
         args.quality.resolution().values()[0] as u32,
         args.quality.resolution().values()[1] as u32,
     );
-    let w = t + PI / 2.0;
+    let mut global_lock = global.lock().unwrap();
+    global_lock.change_image(&mut img);
+
     fill_background(&mut img);
-    draw_axis(&mut img, white, &screen, &args.quality);
-    draw_vector(
-        &Vector::new(vec![t.cos(), t.sin()]).unwrap(),
+    draw_axis(
         &mut img,
         white,
-        &screen,
-        &args.quality,
+        global_lock.screen.clone(),
+        Arc::clone(&quality),
     );
-    draw_vector(
-        &Vector::new(vec![w.cos(), w.sin()]).unwrap(),
-        &mut img,
-        white,
-        &screen,
-        &args.quality,
-    );
+    let mut v = Vector2D::new(t.cos(), t.sin());
+    v.add_context(global_lock.to_owned()).unwrap();
+    println!("test");
+    v.draw(white).unwrap();
     img.save(format!("{}/tmp/frame_{:03}.png", directory, i))?;
     println!("Generated frame {}", i);
     Ok(())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let args = Arc::new(Args::parse());
+    let args = Args::parse();
     let directory = args
         .output
         .parent()
@@ -109,19 +96,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     create_dir_all(format!("{}/tmp", directory))?;
 
-    let screen =
-        Arc::new(Screen2D::new((-3.0, 3.0), (-3.0, 3.0)).ok_or("Invalid screen dimensions")?);
     let completed_frames = Arc::new(Mutex::new(0));
-    let total_frames = 120;
+    let global = Arc::new(Mutex::new(Global::new(
+        args.clone(),
+        (-3.0, 3.0),
+        (-3.0, 3.0),
+    )));
+    let total_frames = 30;
     {
         let thread_pool = ThreadPool::new(30).unwrap();
         for i in 0..total_frames {
-            let args = Arc::clone(&args);
-            let screen = Arc::clone(&screen);
+            let args_arc = Arc::new(args.clone());
+            let global = global.clone();
+
             let completed_frames = Arc::clone(&completed_frames);
             let t = i as f32 * (2.0 * PI / total_frames as f32);
             thread_pool.execute(move || {
-                if let Err(e) = generate_frame(&args, &screen, t, i) {
+                if let Err(e) = generate_frame(args_arc, global, t, i) {
                     eprintln!("Error generating frame {}: {}", i, e);
                 } else {
                     let mut completed = completed_frames.lock().unwrap();
@@ -148,16 +139,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::api::util::interpolate;
+    use crate::api::util::{interpolate, Quality};
 
     use super::api::screen::Screen2D;
 
     use super::*;
     #[test]
     fn test_lerp() {
-        let screen = Screen2D::new((-10.0, 10.0), (-10.0, 10.0)).unwrap();
-        let quality = Quality::HIGH;
-        let (x, y) = interpolate(&quality, &screen, (0.0, 0.0));
+        let screen = Arc::new(Screen2D::new((-10.0, 10.0), (-10.0, 10.0)).unwrap());
+        let quality = Arc::new(Quality::HIGH);
+        let (x, y) = interpolate(quality, screen, (0.0, 0.0));
         assert!(x == 960.0 && y == 540.0);
     }
 }

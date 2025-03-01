@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use imageproc::{
     drawing::{draw_line_segment, draw_line_segment_mut, draw_polygon_mut},
     image::{Rgb, RgbImage},
@@ -7,10 +9,10 @@ use imageproc::{
 use crate::api::{
     point::PointLike,
     screen::{Screen2D, ScreenLike},
-    util::{interpolate, Quality},
+    util::{interpolate, Number, Quality},
 };
 
-fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: &Quality) {
+fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
     let usable_res = quality.usable();
     let center = screen.get_center_pixels(quality.resolution());
     draw_line_segment_mut(
@@ -33,7 +35,12 @@ fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: &Q
     );
 }
 
-fn draw_arrow_tips(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: &Quality) {
+fn draw_arrow_tips(
+    img: &mut RgbImage,
+    color: Rgb<u8>,
+    screen: Arc<Screen2D>,
+    quality: Arc<Quality>,
+) {
     let center = screen.get_center_pixels(quality.resolution());
     let usable = quality.usable();
 
@@ -66,14 +73,14 @@ fn draw_arrow_tips(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, qualit
     );
 }
 
-fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: &Quality) {
+fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
     let (xstart, xend) = (
-        screen.x_axis().0.ceil() as i32 + 1,
-        screen.x_axis().1.floor() as i32 - 1,
+        ScreenLike::<f32>::x_axis(&*screen).0.ceil() as i32 + 1,
+        ScreenLike::<f32>::x_axis(&*screen).1.floor() as i32 - 1,
     );
     let (ystart, yend) = (
-        screen.y_axis().0.ceil() as i32 + 1,
-        screen.y_axis().1.floor() as i32 - 1,
+        ScreenLike::<f32>::y_axis(&*screen).0.ceil() as i32 + 1,
+        ScreenLike::<f32>::y_axis(&*screen).1.floor() as i32 - 1,
     );
 
     let pairs: Vec<(f32, f32)> = (ystart..=yend)
@@ -81,7 +88,7 @@ fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: 
         .filter(|(x, y)| (*x == 0.0 || *y == 0.0) && *x != *y)
         .collect();
     for pair in pairs {
-        let (x, y) = interpolate(quality, screen, pair);
+        let (x, y) = interpolate(quality.clone(), screen.clone(), pair);
         if pair.1 == 0.0 {
             draw_line_segment_mut(img, (x, y - 10.0), (x, y + 10.0), color);
         } else {
@@ -90,8 +97,8 @@ fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: 
     }
 }
 
-pub fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: &Screen2D, quality: &Quality) {
-    draw_lines(img, color, screen, quality);
-    draw_arrow_tips(img, color, screen, quality);
+pub fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
+    draw_lines(img, color, screen.clone(), quality.clone());
+    draw_arrow_tips(img, color, screen.clone(), quality.clone());
     draw_markers(img, color, screen, quality);
 }
