@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use imageproc::{
-    drawing::{draw_line_segment, draw_line_segment_mut, draw_polygon_mut},
-    image::{Rgb, RgbImage},
+    drawing::{draw_line_segment, draw_line_segment_mut, draw_polygon_mut, Canvas},
+    image::{GenericImageView, Rgb, RgbImage},
     point::Point,
 };
 
@@ -12,7 +12,7 @@ use crate::api::{
     util::{interpolate, Number, Quality},
 };
 
-fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
+fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Quality) {
     let usable_res = quality.usable();
     let center = screen.get_center_pixels(quality.resolution());
     draw_line_segment_mut(
@@ -35,12 +35,7 @@ fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality
     );
 }
 
-fn draw_arrow_tips(
-    img: &mut RgbImage,
-    color: Rgb<u8>,
-    screen: Arc<Screen2D>,
-    quality: Arc<Quality>,
-) {
+fn draw_arrow_tips(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Quality) {
     let center = screen.get_center_pixels(quality.resolution());
     let usable = quality.usable();
 
@@ -73,7 +68,7 @@ fn draw_arrow_tips(
     );
 }
 
-fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
+fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Quality) {
     let (xstart, xend) = (
         ScreenLike::<f32>::x_axis(&*screen).0.ceil() as i32 + 1,
         ScreenLike::<f32>::x_axis(&*screen).1.floor() as i32 - 1,
@@ -97,8 +92,9 @@ fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quali
     }
 }
 
-pub fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Arc<Quality>) {
-    draw_lines(img, color, screen.clone(), quality.clone());
-    draw_arrow_tips(img, color, screen.clone(), quality.clone());
+pub fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>) {
+    let quality = Quality::new(img.width(), img.height()).unwrap();
+    draw_lines(img, color, screen.clone(), quality);
+    draw_arrow_tips(img, color, screen.clone(), quality);
     draw_markers(img, color, screen, quality);
 }
