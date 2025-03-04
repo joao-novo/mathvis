@@ -25,6 +25,15 @@ pub enum Quality {
 }
 
 impl Quality {
+    pub fn new(x: u32, y: u32) -> Option<Quality> {
+        match (x, y) {
+            (854, 480) => Some(Quality::LOW),
+            (1280, 720) => Some(Quality::MEDIUM),
+            (1920, 1080) => Some(Quality::HIGH),
+            (3840, 2160) => Some(Quality::ULTRA),
+            _ => None,
+        }
+    }
     pub fn resolution(&self) -> Point<f32> {
         match self {
             Quality::LOW => Point::new(vec![854.0, 480.0]).unwrap(),
@@ -51,7 +60,7 @@ impl ToString for Quality {
     }
 }
 
-pub fn interpolate(quality: Arc<Quality>, screen: Arc<Screen2D>, (x, y): (f32, f32)) -> (f32, f32) {
+pub fn interpolate(quality: Quality, screen: Arc<Screen2D>, (x, y): (f32, f32)) -> (f32, f32) {
     let res = quality.resolution();
     let usable_res = quality.usable();
     let center =
@@ -88,38 +97,6 @@ pub trait Number:
 impl<T: Num + ToPrimitive + Copy + Clone + PartialOrd + Neg<Output = Self> + PartialEq> Number
     for T
 {
-}
-
-#[derive(Debug, Clone)]
-pub struct Global {
-    pub(crate) quality: Arc<Quality>,
-    pub(crate) screen: Arc<Screen2D>,
-    pub(crate) current_image: Arc<Mutex<RgbImage>>,
-}
-
-impl Global {
-    pub fn new(args: Args, (xstart, xend): (f32, f32), (ystart, yend): (f32, f32)) -> Self {
-        let quality = args.quality;
-        let img = RgbImage::new(
-            quality.resolution().values()[0] as u32,
-            quality.resolution().values()[1] as u32,
-        );
-        println!(
-            "{}, {}",
-            quality.resolution().values()[0],
-            quality.resolution().values()[1]
-        );
-        let screen = Screen2D::new((xstart, xend), (ystart, yend)).unwrap();
-        Self {
-            quality: Arc::new(quality),
-            screen: Arc::new(screen),
-            current_image: Arc::new(Mutex::new(img)),
-        }
-    }
-
-    pub fn change_image(&mut self, img: &mut RgbImage) {
-        self.current_image = Arc::new(Mutex::new(img.clone()));
-    }
 }
 
 #[derive(Parser, Debug, Clone)]

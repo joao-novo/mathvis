@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::animation::show::Show2D;
 
 use super::{
@@ -11,10 +13,13 @@ pub trait ScreenLike<V: Number> {
     fn y_axis(&self) -> (f32, f32);
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Screen2D {
     x_axis: (f32, f32),
     y_axis: (f32, f32),
+    pub(crate) save_directory: String,
+    pub(crate) current_frame: u32,
+    pub(crate) fps: u32,
 }
 
 // #[derive(Debug, PartialEq, Clone, Copy)]
@@ -25,11 +30,19 @@ pub struct Screen2D {
 // }
 
 impl Screen2D {
-    pub fn new((xstart, xend): (f32, f32), (ystart, yend): (f32, f32)) -> Option<Self> {
+    pub fn new(
+        (xstart, xend): (f32, f32),
+        (ystart, yend): (f32, f32),
+        save_directory: String,
+        fps: u32,
+    ) -> Option<Self> {
         if xstart < xend && ystart < yend {
             return Some(Screen2D {
                 x_axis: (xstart, xend),
                 y_axis: (ystart, yend),
+                save_directory,
+                current_frame: 0,
+                fps,
             });
         }
         None
@@ -46,6 +59,12 @@ impl Screen2D {
         let ratio_x = self.x_axis.0.abs() / (self.x_axis.1.abs() + self.x_axis.0.abs());
         let ratio_y = self.y_axis.1.abs() / (self.y_axis.1.abs() + self.y_axis.0.abs());
         (res.values()[0] * ratio_x, res.values()[1] * ratio_y)
+    }
+
+    pub fn change_current_frame(&mut self, val: u32) {
+        if val > self.current_frame {
+            self.current_frame = val;
+        }
     }
 }
 
@@ -109,7 +128,7 @@ mod tests {
 
     #[test]
     fn test_center() {
-        let screen = Screen2D::new((-10.0, 10.0), (-10.0, 15.0)).unwrap();
+        let screen = Screen2D::new((-10.0, 10.0), (-10.0, 15.0), String::new()).unwrap();
         println!(
             "{:?}",
             screen.get_center_pixels(Point::new(vec![1920.0, 1080.0]).unwrap())

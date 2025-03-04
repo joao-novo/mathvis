@@ -148,19 +148,6 @@ where
     }
 }
 
-// impl<'a> Move for Vector2D<'a> {
-//     fn move_to(&self, x: f32, y: f32) -> Result<Self, &str>
-//     where
-//         Self: Sized,
-//     {
-//         if let Some(vector) = Self::new(self.context, x, y) {
-//             return Ok(vector);
-//         }
-//         Err("out of bounds")
-//     }
-// }
-//
-
 #[cfg(test)]
 mod tests {
     use super::*;
