@@ -1,47 +1,9 @@
 # mathvis
 
-Math visualizer and animation creator built in Rust with Flutter.
+Math visualizer and animation creator built in Rust with Flutter for interactivity (not yet implemented) and a scripting domain-specific language made in Haskell (not yet implemented).
 
-# TODO
+# How to run
 
-## Backend
-
-- [ ] __Basic Vector and Matrix API__:
-  - __Points__:
-    - [x] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [x] TESTED
-  - __Vectors__:
-    - [x] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [x] TESTED
-  - __Matrices__:
-    - [x] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [x] TESTED
-- [ ] __CLI for generating video animations__:
-  - __Clap CLI__:
-    - [ ] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [ ] TESTED
-  - __Logic for generating animation__:
-    - [ ] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [ ] TESTED
-- [ ] __API for displaying and moving objects in a screen__:
-  - __Basic Movement__:
-    - [ ] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [ ] TESTED
-  - __More complex operations__:
-    - [ ] IMPLEMENTED
-    - [ ] DOCUMENTED
-    - [ ] TESTED
-- [ ] __Drawing objects on a canvas__:
-  - ...
-
-## UI
-
-- ...
-
-
+This project is still in a very early stage, so bugs are more than common and features are extremely limited.
+In the future, scripts will be written in its own language called MVScript, but for now, you can (very painfully) write your code in the main function in rust/src/main.rs, then run it with cargo run -- <source> <flags>. The source file doesn't matter as it's not used for anything yet.
+Check the existing code in the main file for an example of how to write your own script.
