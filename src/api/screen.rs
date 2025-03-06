@@ -20,6 +20,8 @@ pub struct Screen2D {
     pub(crate) save_directory: String,
     pub(crate) current_frame: u32,
     pub(crate) fps: u32,
+    pub(crate) width: u32,
+    pub(crate) height: u32,
 }
 
 // #[derive(Debug, PartialEq, Clone, Copy)]
@@ -35,6 +37,8 @@ impl Screen2D {
         (ystart, yend): (f32, f32),
         save_directory: String,
         fps: u32,
+        width: u32,
+        height: u32,
     ) -> Option<Self> {
         if xstart < xend && ystart < yend {
             return Some(Screen2D {
@@ -43,6 +47,8 @@ impl Screen2D {
                 save_directory,
                 current_frame: 0,
                 fps,
+                width,
+                height,
             });
         }
         None
@@ -128,7 +134,8 @@ mod tests {
 
     #[test]
     fn test_center() {
-        let screen = Screen2D::new((-10.0, 10.0), (-10.0, 15.0), String::new()).unwrap();
+        let screen =
+            Screen2D::new((-10.0, 10.0), (-10.0, 15.0), String::new(), 30, 1920, 1080).unwrap();
         println!(
             "{:?}",
             screen.get_center_pixels(Point::new(vec![1920.0, 1080.0]).unwrap())

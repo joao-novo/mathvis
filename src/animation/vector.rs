@@ -2,7 +2,7 @@ use std::{
     error::Error,
     f32::consts::PI,
     ops::{Add, Mul},
-    sync::{Arc, Mutex},
+    sync::{atomic::AtomicUsize, Arc, Mutex},
 };
 
 use imageproc::{
@@ -13,6 +13,7 @@ use imageproc::{
 
 use crate::{
     api::{
+        matrix::Matrix,
         point::{self, PointLike},
         screen::{Screen2D, ScreenLike},
         util::{interpolate, Number, Quality},
@@ -28,7 +29,8 @@ pub struct Vector2D<T: Number> {
     vector: Vector<T>,
     x: T,
     y: T,
-    context: Option<Arc<Screen2D>>,
+    context: Option<Arc<Mutex<Screen2D>>>,
+    color: Rgb<u8>,
 }
 
 impl<T: Number> Show2D<T> for Vector2D<T> {
@@ -51,8 +53,9 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
         )
     }
 
-    fn add_context(&mut self, context: Arc<Screen2D>) -> Result<(), Box<dyn Error>> {
-        if !context.can_contain(self) {
+    fn add_context(&mut self, context: Arc<Mutex<Screen2D>>) -> Result<(), Box<dyn Error>> {
+        let context_lock = context.lock().unwrap();
+        if !context_lock.can_contain(self) {
             return Err("Vector cannot be contained within the context's bounds.".into());
         }
         self.context = Some(context.clone());
@@ -61,56 +64,171 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
 
     fn move_along_parametric<F>(
         &self,
-        color: Rgb<u8>,
-        img: &mut RgbImage,
-        duration: u32,
+        duration: f32,
         parametric: F,
         t_min: f32,
         t_max: f32,
     ) -> Result<(), Box<dyn Error>>
     where
-        F: Fn(f32) -> (f32, f32),
+        F: (Fn(f32) -> (f32, f32)) + Send + Sync + 'static,
     {
-        if let Some(context) = self.clone().context {
-            let current_frame = context.current_frame + 1;
-            let frames = duration * context.fps;
-            let completed_frames = Arc::new(Mutex::new(0));
-            {
-                let thread_pool = ThreadPool::new(context.fps as usize).unwrap();
-                for i in 0..frames {
-                    let completed_frames = Arc::clone(&completed_frames);
-                    let mut img = RgbImage::new(img.width(), img.height());
+        let context = self
+            .context
+            .clone()
+            .ok_or("This object does not have an associated context")?;
+
+        let (current_frame, save_directory, fps, img_width, img_height) = {
+            let context_lock = context.lock().map_err(|_| "Failed to lock context")?;
+            (
+                context_lock.current_frame,
+                context_lock.save_directory.clone(),
+                context_lock.fps,
+                context_lock.width,
+                context_lock.height,
+            )
+        };
+
+        let frames: u32 = (duration * fps as f32) as u32;
+        let completed_frames = Arc::new(Mutex::new(0));
+        let shared_parametric = Arc::new(parametric);
+        let color = Arc::new(self.color);
+        let error_flag = Arc::new(Mutex::new(false));
+
+        {
+            let thread_pool = ThreadPool::new(fps as usize).unwrap();
+
+            for i in 0..frames {
+                let completed_frames = Arc::clone(&completed_frames);
+                let error_flag = Arc::clone(&error_flag);
+                let context = Arc::clone(&context);
+                let save_directory = save_directory.clone();
+                let shared_parametric = Arc::clone(&shared_parametric);
+                let color = Arc::clone(&color);
+                let white = Rgb([255, 255, 255]);
+
+                let frame_generator = move || {
+                    let mut img = RgbImage::new(img_width, img_height);
+
                     let t = t_min + (i as f32 / (frames - 1) as f32) * (t_max - t_min);
-                    let (x, y) = parametric(t);
-                    let context = context.clone();
-                    thread_pool.execute(move || {
-                        fill_background(&mut img);
-                        draw_axis(&mut img, color, context.clone());
-                        let mut v = Vector2D::new(x, y);
-                        v.add_context(context.clone()).unwrap();
-                        v.draw(color, &mut img).unwrap();
-                        img.save(format!(
-                            "{}/tmp/frame_{:03}.png",
-                            context.save_directory,
-                            current_frame + i,
-                        ))
-                        .unwrap();
-                        println!("Generated frame {}", i);
-                    })
-                }
-                // TODO check for completed == done and update context frame count
+                    let (x, y) = shared_parametric(t);
+
+                    let context_lock = match context.lock() {
+                        Ok(lock) => lock,
+                        Err(_) => {
+                            let mut error = error_flag.lock().unwrap();
+                            *error = true;
+                            return;
+                        }
+                    };
+
+                    fill_background(&mut img);
+                    draw_axis(&mut img, white, Arc::new(context_lock.clone()));
+
+                    drop(context_lock);
+
+                    let mut v = Vector2D::new(x, y, *color);
+                    if let Err(_) = v.add_context(context.clone()) {
+                        let mut error = error_flag.lock().unwrap();
+                        *error = true;
+                        return;
+                    }
+
+                    if let Err(_) = v.draw(v.color, &mut img) {
+                        let mut error = error_flag.lock().unwrap();
+                        *error = true;
+                        return;
+                    }
+                    match img.save(format!(
+                        "{}/tmp/frame_{:03}.png",
+                        save_directory,
+                        current_frame + i,
+                    )) {
+                        Ok(_) => {
+                            let mut completed = completed_frames.lock().unwrap();
+                            *completed += 1;
+                            println!("Generated frame {}", current_frame + i);
+                        }
+                        Err(_) => {
+                            let mut error = error_flag.lock().unwrap();
+                            *error = true;
+                        }
+                    }
+                };
+
+                thread_pool.execute(frame_generator);
             }
-            return Ok(());
         }
-        Err(
-            "This object does not have an associated context. Try using the add_context method."
-                .into(),
+
+        let completed = *completed_frames.lock().unwrap();
+        let has_error = *error_flag.lock().unwrap();
+
+        if has_error || completed != frames as usize {
+            println!("{}", has_error);
+            return Err(format!(
+                "Frame generation failed. Completed: {}, Total: {}",
+                completed, frames
+            )
+            .into());
+        }
+
+        {
+            let mut context_lock = context.lock().unwrap();
+            context_lock.change_current_frame(current_frame + frames);
+        }
+
+        Ok(())
+    }
+
+    fn rotate(
+        &self,
+        duration: f32,
+        angle: f32,
+        center: point::Point<f32>,
+    ) -> Result<(), Box<dyn Error>> {
+        let (x, y) = (Arc::new(self.x), Arc::new(self.y));
+        self.move_along_parametric(
+            duration,
+            move |t| {
+                (
+                    (Arc::clone(&x).to_f32().unwrap() - center.values()[0]) * t.cos()
+                        - (Arc::clone(&y).to_f32().unwrap() - center.values()[1]) * t.sin()
+                        + center.values()[0],
+                    (Arc::clone(&x).to_f32().unwrap() - center.values()[0]) * angle.sin()
+                        + (Arc::clone(&y).to_f32().unwrap() - center.values()[1]) * t.cos()
+                        + center.values()[1],
+                )
+            },
+            0.0,
+            angle,
+        )
+    }
+    fn move_to(&self, duration: f32, point: point::Point<f32>) -> Result<(), Box<dyn Error>> {
+        let (x, y) = (Arc::new(self.x), Arc::new(self.y));
+        self.move_along_parametric(
+            duration,
+            move |t| {
+                (
+                    (1.0 - t) * x.to_f32().unwrap() + t * point.values()[0],
+                    (1.0 - t) * y.to_f32().unwrap() + t * point.values()[1],
+                )
+            },
+            0.0,
+            1.0,
+        )
+    }
+
+    fn multiply_by_matrix(&self, duration: f32, matrix: Matrix<T>) -> Result<(), Box<dyn Error>> {
+        let vector = (matrix * self.clone()).unwrap();
+        self.move_to(
+            duration,
+            point::Point::new(vec![vector.x.to_f32().unwrap(), vector.y.to_f32().unwrap()])
+                .unwrap(),
         )
     }
 }
 
 impl<T: Number> Vector2D<T> {
-    pub fn new(x: T, y: T) -> Self {
+    pub fn new(x: T, y: T, color: Rgb<u8>) -> Self {
         // Known to work since x and y always exist
         let vector = Vector::new(vec![x, y]).unwrap();
         Self {
@@ -118,6 +236,7 @@ impl<T: Number> Vector2D<T> {
             x,
             y,
             context: None,
+            color,
         }
     }
 
@@ -126,13 +245,14 @@ impl<T: Number> Vector2D<T> {
         self.vector.dot(other.vector).unwrap()
     }
 
-    pub fn origin() -> Self {
+    pub fn origin(color: Rgb<u8>) -> Self {
         let vector = Vector::origin(2).unwrap();
         Self {
             vector,
             x: T::zero(),
             y: T::zero(),
             context: None,
+            color,
         }
     }
 }
@@ -144,14 +264,20 @@ where
     type Output = Result<Vector2D<T>, Box<dyn Error>>;
     fn add(self, rhs: Vector2D<T>) -> Self::Output {
         let vector = (self.vector + rhs.vector).unwrap();
-        if self.context != rhs.context {
+        if self
+            .context
+            .as_ref()
+            .zip(rhs.context.as_ref())
+            .map_or(false, |(a, b)| *a.lock().unwrap() != *b.lock().unwrap())
+        {
             return Err("LHS and RHS don't share the same context.".into());
         }
         Ok(Self {
             vector,
             x: self.x + rhs.x,
             y: self.y + rhs.y,
-            context: Some(self.context.unwrap().clone()),
+            context: self.context,
+            color: self.color,
         })
     }
 }
@@ -170,7 +296,30 @@ where
             x: scalar * self.x,
             y: scalar * self.y,
             context: self.context,
+            color: self.color,
         };
+    }
+}
+
+impl<T: Number> Mul<Vector2D<T>> for Matrix<T> {
+    type Output = Result<Vector2D<T>, Box<dyn Error>>;
+
+    fn mul(self, rhs: Vector2D<T>) -> Self::Output {
+        if self.get_dimensions() != (2, 2) {
+            return Err("Matrix must be 2x2 to apply to a 2d vector.".into());
+        }
+        let vals = self.values;
+        let (x, y) = (
+            vals[0][0] * rhs.x + vals[0][1] * rhs.y,
+            vals[1][0] * rhs.x + vals[1][1] * rhs.y,
+        );
+        Ok(Vector2D {
+            vector: Vector::new(vec![x, y]).unwrap(),
+            x,
+            y,
+            context: rhs.context,
+            color: rhs.color,
+        })
     }
 }
 
@@ -178,22 +327,23 @@ pub(crate) fn draw_vector<T>(
     vector: &Vector<T>,
     img: &mut RgbImage,
     color: Rgb<u8>,
-    screen: Arc<Screen2D>,
+    screen: Arc<Mutex<Screen2D>>,
 ) where
     T: Number,
 {
+    let screen = screen.lock().unwrap();
     let quality = Quality::new(img.width(), img.height()).unwrap();
     let center = screen.get_center_pixels(quality.resolution());
     let (x, y) = interpolate(
         quality,
-        screen.clone(),
+        Arc::new(screen.clone()),
         (
             vector.values()[0].to_f32().unwrap(),
             vector.values()[1].to_f32().unwrap(),
         ),
     );
     draw_line_segment_mut(img, center, (x, y), color);
-    draw_vector_tip(vector, img, color, screen, quality);
+    draw_vector_tip(vector, img, color, Arc::new(screen.clone()), quality);
 }
 
 pub(crate) fn rotate(point: &Point<f32>, angle: f32, rotation_center: &Point<f32>) -> Point<f32> {
