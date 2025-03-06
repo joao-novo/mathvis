@@ -14,7 +14,7 @@ use std::ops::{Add, Mul};
 /// Vector implements [`PointLike`](trait.PointLike.html), essentially making it behave like a point with special vector-specific operations (dot product, multiplication with matrices).
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct Vector<T: Number> {
-    values: Vec<T>,
+    pub(crate) values: Vec<T>,
 }
 
 impl<T> Vector<T>

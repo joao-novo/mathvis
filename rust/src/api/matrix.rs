@@ -1,15 +1,19 @@
-use std::ops::{AddAssign, Mul, Neg};
+use std::{
+    error::Error,
+    iter::Sum,
+    ops::{Add, AddAssign, Mul, Neg},
+};
 
 use rand::{
     distr::{Distribution, StandardUniform},
     rng, Rng,
 };
 
-use super::util::Number;
+use super::{point::PointLike, util::Number, vector::Vector};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Matrix<T: Number> {
-    values: Vec<Vec<T>>,
+    pub(crate) values: Vec<Vec<T>>,
 }
 
 impl<T> Matrix<T>
@@ -40,6 +44,15 @@ where
                 })
                 .collect(),
         })
+    }
+
+    pub fn rotation_matrix_2d(angle: f32) -> Matrix<f32> {
+        Matrix {
+            values: vec![
+                vec![angle.cos(), -angle.sin()],
+                vec![angle.sin(), angle.cos()],
+            ],
+        }
     }
 
     pub fn random_matrix((rows, cols): (usize, usize)) -> Option<Self>
@@ -123,6 +136,31 @@ where
     }
 }
 
+impl<T> Mul<Vector<T>> for Matrix<T>
+where
+    T: Number + Sum,
+{
+    type Output = Result<Vector<T>, Box<dyn Error>>;
+
+    fn mul(self, rhs: Vector<T>) -> Self::Output {
+        if self.get_dimensions().1 != rhs.get_dimensions() {
+            return Err("Matrix must be mxn to multiply by vector of size n.".into());
+        }
+        Ok(Vector {
+            values: self
+                .values
+                .iter()
+                .map(|row| {
+                    row.iter()
+                        .zip(rhs.values().iter())
+                        .map(|(&a, &b)| a * b)
+                        .sum()
+                })
+                .collect(),
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -163,5 +201,12 @@ mod tests {
         ])
         .unwrap();
         assert!(a.determinant() == Ok(4.0));
+    }
+
+    #[test]
+    fn matrix_vector_mult() {
+        let a = Matrix::new(vec![vec![1, -1, 2], vec![0, -3, 1]]).unwrap();
+        let v = Vector::new(vec![2, 1, 0]).unwrap();
+        assert!((a * v).unwrap() == Vector::new(vec![1, -3]).unwrap());
     }
 }

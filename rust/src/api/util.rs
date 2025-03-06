@@ -84,7 +84,16 @@ pub fn interpolate(quality: Quality, screen: Arc<Screen2D>, (x, y): (f32, f32)) 
 }
 
 pub trait Number:
-    Num + Clone + Copy + ToPrimitive + PartialOrd + Neg<Output = Self> + PartialEq
+    Num
+    + Clone
+    + Copy
+    + ToPrimitive
+    + PartialOrd
+    + Neg<Output = Self>
+    + PartialEq
+    + Send
+    + Sync
+    + 'static
 {
     fn abs(self) -> Self {
         if self > Self::zero() {
@@ -94,8 +103,18 @@ pub trait Number:
     }
 }
 
-impl<T: Num + ToPrimitive + Copy + Clone + PartialOrd + Neg<Output = Self> + PartialEq> Number
-    for T
+impl<
+        T: Num
+            + ToPrimitive
+            + Copy
+            + Clone
+            + PartialOrd
+            + Neg<Output = Self>
+            + PartialEq
+            + Send
+            + Sync
+            + 'static,
+    > Number for T
 {
 }
 

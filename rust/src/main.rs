@@ -10,7 +10,11 @@ use std::{
 };
 
 use animation::{axis::draw_axis, background::fill_background, show::Show2D, vector::Vector2D};
-use api::{point::PointLike, screen::Screen2D, util::Args};
+use api::{
+    point::{Point, PointLike},
+    screen::Screen2D,
+    util::Args,
+};
 use clap::Parser;
 use imageproc::image::{Rgb, RgbImage};
 use misc::thread_pool::ThreadPool;
@@ -61,16 +65,26 @@ fn main() -> Result<(), Box<dyn Error>> {
         args.quality.resolution().values()[0] as u32,
         args.quality.resolution().values()[1] as u32,
     );
-    let screen =
-        Arc::new(Screen2D::new((-3.0, 3.0), (-3.0, 3.0), directory.clone(), args.fps).unwrap());
-    let mut v = Vector2D::new(0, 1);
+    let screen = Arc::new(Mutex::new(
+        Screen2D::new(
+            (-3.0, 3.0),
+            (-3.0, 3.0),
+            directory.clone(),
+            args.fps,
+            args.quality.resolution().values()[0] as u32,
+            args.quality.resolution().values()[1] as u32,
+        )
+        .unwrap(),
+    ));
+    let mut v = Vector2D::new(0, 1, white);
     v.add_context(screen.clone()).unwrap();
-    v.move_along_parametric(white, &mut img, 2, |t| (t.cos(), t.sin()), 0.0, 2.0 * PI)
+    v.move_to(1.0, Point::new(vec![1.0, 1.0]).unwrap()).unwrap();
+    v.rotate(1.0, 2.0 * PI, Point::new(vec![1.0, 0.0]).unwrap())
         .unwrap();
 
     join_frames(&args, directory.clone())?;
 
-    remove_dir_all(format!("{}/tmp", directory)).unwrap();
+    // remove_dir_all(format!("{}/tmp", directory)).unwrap();
     Ok(())
 }
 
@@ -83,8 +97,9 @@ mod tests {
     use super::*;
     #[test]
     fn test_lerp() {
-        let screen =
-            Arc::new(Screen2D::new((-10.0, 10.0), (-10.0, 10.0), String::new(), 30).unwrap());
+        let screen = Arc::new(
+            Screen2D::new((-10.0, 10.0), (-10.0, 10.0), String::new(), 30, 1920, 1080).unwrap(),
+        );
         let quality = Quality::HIGH;
         let (x, y) = interpolate(quality, screen, (0.0, 0.0));
         assert!(x == 960.0 && y == 540.0);
