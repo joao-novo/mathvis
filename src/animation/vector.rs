@@ -1,6 +1,6 @@
 use std::{
     error::Error,
-    f32::consts::PI,
+    f64::consts::PI,
     ops::{Add, Mul},
     sync::{atomic::AtomicUsize, Arc, Mutex},
 };
@@ -66,11 +66,11 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
         &self,
         duration: f32,
         parametric: F,
-        t_min: f32,
-        t_max: f32,
+        t_min: f64,
+        t_max: f64,
     ) -> Result<(), Box<dyn Error>>
     where
-        F: (Fn(f32) -> (f32, f32)) + Send + Sync + 'static,
+        F: (Fn(f64) -> (f64, f64)) + Send + Sync + 'static,
     {
         let context = self
             .context
@@ -109,7 +109,7 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
                 let frame_generator = move || {
                     let mut img = RgbImage::new(img_width, img_height);
 
-                    let t = t_min + (i as f32 / (frames - 1) as f32) * (t_max - t_min);
+                    let t = t_min + (i as f64 / (frames - 1) as f64) * (t_max - t_min);
                     let (x, y) = shared_parametric(t);
 
                     let context_lock = match context.lock() {
@@ -163,7 +163,6 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
         let has_error = *error_flag.lock().unwrap();
 
         if has_error || completed != frames as usize {
-            println!("{}", has_error);
             return Err(format!(
                 "Frame generation failed. Completed: {}, Total: {}",
                 completed, frames
@@ -182,19 +181,19 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
     fn rotate(
         &self,
         duration: f32,
-        angle: f32,
-        center: point::Point<f32>,
+        angle: f64,
+        center: point::Point<f64>,
     ) -> Result<(), Box<dyn Error>> {
         let (x, y) = (Arc::new(self.x), Arc::new(self.y));
         self.move_along_parametric(
             duration,
             move |t| {
                 (
-                    (Arc::clone(&x).to_f32().unwrap() - center.values()[0]) * t.cos()
-                        - (Arc::clone(&y).to_f32().unwrap() - center.values()[1]) * t.sin()
+                    (Arc::clone(&x).to_f64() - center.values()[0]) * t.cos()
+                        - (Arc::clone(&y).to_f64() - center.values()[1]) * t.sin()
                         + center.values()[0],
-                    (Arc::clone(&x).to_f32().unwrap() - center.values()[0]) * angle.sin()
-                        + (Arc::clone(&y).to_f32().unwrap() - center.values()[1]) * t.cos()
+                    (Arc::clone(&x).to_f64() - center.values()[0]) * angle.sin()
+                        + (Arc::clone(&y).to_f64() - center.values()[1]) * t.cos()
                         + center.values()[1],
                 )
             },
@@ -202,14 +201,14 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
             angle,
         )
     }
-    fn move_to(&self, duration: f32, point: point::Point<f32>) -> Result<(), Box<dyn Error>> {
+    fn move_to(&self, duration: f32, point: point::Point<f64>) -> Result<(), Box<dyn Error>> {
         let (x, y) = (Arc::new(self.x), Arc::new(self.y));
         self.move_along_parametric(
             duration,
             move |t| {
                 (
-                    (1.0 - t) * x.to_f32().unwrap() + t * point.values()[0],
-                    (1.0 - t) * y.to_f32().unwrap() + t * point.values()[1],
+                    (1.0 - t) * x.to_f64() + t * point.values()[0],
+                    (1.0 - t) * y.to_f64() + t * point.values()[1],
                 )
             },
             0.0,
@@ -221,9 +220,18 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
         let vector = (matrix * self.clone()).unwrap();
         self.move_to(
             duration,
-            point::Point::new(vec![vector.x.to_f32().unwrap(), vector.y.to_f32().unwrap()])
-                .unwrap(),
-        )
+            point::Point::new(vec![vector.x.to_f64(), vector.y.to_f64()]).unwrap(),
+        )?;
+        Ok(())
+    }
+
+    fn rotate_then_scale(&self, duration: f32, matrix: Matrix<T>) -> Result<(), Box<dyn Error>> {
+        let (q, s) = matrix.polar_decomposition_2d()?;
+        println!("{:?} {:?}", q.clone(), s.clone());
+        self.multiply_by_matrix(duration / 2.0, q.clone())?;
+        let mid = (q * self.clone())?;
+        mid.multiply_by_matrix(duration / 2.0, s)?;
+        Ok(())
     }
 }
 
@@ -240,7 +248,7 @@ impl<T: Number> Vector2D<T> {
         }
     }
 
-    pub fn dot(&self, other: Vector2D<impl Number>) -> f32 {
+    pub fn dot(&self, other: Vector2D<T>) -> T {
         // Always works because both vectors are 2D
         self.vector.dot(other.vector).unwrap()
     }
@@ -338,15 +346,15 @@ pub(crate) fn draw_vector<T>(
         quality,
         Arc::new(screen.clone()),
         (
-            vector.values()[0].to_f32().unwrap(),
-            vector.values()[1].to_f32().unwrap(),
+            vector.values()[0].to_f64() as f32,
+            vector.values()[1].to_f64() as f32,
         ),
     );
     draw_line_segment_mut(img, center, (x, y), color);
     draw_vector_tip(vector, img, color, Arc::new(screen.clone()), quality);
 }
 
-pub(crate) fn rotate(point: &Point<f32>, angle: f32, rotation_center: &Point<f32>) -> Point<f32> {
+pub(crate) fn rotate(point: &Point<f64>, angle: f64, rotation_center: &Point<f64>) -> Point<f64> {
     let new_x = (point.x - rotation_center.x) * angle.cos()
         - (point.y - rotation_center.y) * angle.sin()
         + rotation_center.x;
@@ -365,11 +373,8 @@ pub(crate) fn draw_vector_tip<T>(
 ) where
     T: Number,
 {
-    let (a, b) = (
-        vector.values()[0].to_f32().unwrap(),
-        vector.values()[1].to_f32().unwrap(),
-    );
-    let (p1, p2): (point::Point<f32>, point::Point<f32>) = (
+    let (a, b) = (vector.values()[0].to_f64(), vector.values()[1].to_f64());
+    let (p1, p2): (point::Point<f64>, point::Point<f64>) = (
         rotate(
             &Point::new(a, b),
             2.0 * PI / 3.0,
@@ -383,13 +388,17 @@ pub(crate) fn draw_vector_tip<T>(
         )
         .into(),
     );
-    let (x, y) = interpolate(quality.clone(), screen.clone(), (a, b));
+    let (x, y) = interpolate(quality.clone(), screen.clone(), (a as f32, b as f32));
     let (x1, y1) = interpolate(
         quality.clone(),
         screen.clone(),
-        (p1.values()[0], p1.values()[1]),
+        (p1.values()[0] as f32, p1.values()[1] as f32),
     );
-    let (x2, y2) = interpolate(quality, screen, (p2.values()[0], p2.values()[1]));
+    let (x2, y2) = interpolate(
+        quality,
+        screen,
+        (p2.values()[0] as f32, p2.values()[1] as f32),
+    );
 
     draw_polygon_mut(
         img,
