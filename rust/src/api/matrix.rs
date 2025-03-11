@@ -9,7 +9,13 @@ use rand::{
     rng, Rng,
 };
 
-use super::{point::PointLike, util::Number, vector::Vector};
+use crate::animation::vector::Vector2D;
+
+use super::{
+    point::PointLike,
+    util::{quadsolve, Number},
+    vector::Vector,
+};
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Matrix<T: Number> {
@@ -18,7 +24,7 @@ pub struct Matrix<T: Number> {
 
 impl<T> Matrix<T>
 where
-    T: Number + Neg<Output = T> + AddAssign<T>,
+    T: Number,
 {
     pub fn new(values: Vec<Vec<T>>) -> Option<Self> {
         let first_length = values.first().map_or(0, |row| row.len());
@@ -69,9 +75,9 @@ where
         Some(Matrix { values: vals })
     }
 
-    pub fn determinant(&self) -> Result<T, &str> {
+    pub fn determinant(&self) -> Result<T, Box<dyn Error>> {
         if self.get_dimensions().0 != self.get_dimensions().1 {
-            return Err("must be a square matrix");
+            return Err("must be a square matrix".into());
         }
         let size = self.get_dimensions().0;
         if size == 1 {
@@ -100,6 +106,88 @@ where
         }
 
         Ok(curr_determinant)
+    }
+
+    pub fn transpose(&self) -> Matrix<T> {
+        let values: Vec<Vec<T>> = (0..self.get_dimensions().1)
+            .map(|i| {
+                self.values
+                    .iter()
+                    .map(|inner| inner[i].clone())
+                    .collect::<Vec<T>>()
+            })
+            .collect();
+        Matrix { values }
+    }
+
+    pub fn eigenvalues_2d(self) -> Result<(T, T), Box<dyn Error>> {
+        if self.get_dimensions() != (2, 2) {
+            return Err("Matrix is not 2x2".into());
+        }
+        let (a, b, c, d) = (
+            self.values[0][0],
+            self.values[0][1],
+            self.values[1][0],
+            self.values[1][1],
+        );
+        Ok(quadsolve(T::one(), -a - d, -(b * c) + a * d))
+    }
+
+    pub fn eigenvectors_2d(self) -> Result<(Vector<T>, Vector<T>), Box<dyn Error>> {
+        let (a, b, c, d) = (
+            self.values[0][0],
+            self.values[0][1],
+            self.values[1][0],
+            self.values[1][1],
+        );
+        if let Ok((l1, l2)) = self.eigenvalues_2d() {
+            return Ok((
+                Vector::new(vec![l1 - a, b]).unwrap().normalize().unwrap(),
+                Vector::new(vec![l2 - d, c]).unwrap().normalize().unwrap(),
+            ));
+        }
+        Err("Matrix is not 2x2".into())
+    }
+
+    pub fn invert_2d(self) -> Result<Matrix<T>, Box<dyn Error>> {
+        if self.get_dimensions() != (2, 2) {
+            return Err("Matrix is not 2x2".into());
+        }
+        let (a, b, c, d) = (
+            self.values[0][0],
+            self.values[0][1],
+            self.values[1][0],
+            self.values[1][1],
+        );
+        Ok(Matrix::new(vec![vec![d, -b], vec![-c, a]]).unwrap()
+            * (T::one() / self.determinant()?))
+    }
+
+    pub fn svd_2d(self) -> Result<(Matrix<T>, Matrix<T>, Matrix<T>), Box<dyn Error>> {
+        if let Ok((l1, l2)) = self.clone().eigenvalues_2d() {
+            let sigma =
+                Matrix::new(vec![vec![l1.sqrt(), T::zero()], vec![T::zero(), l2.sqrt()]]).unwrap();
+            let (v1, v2) = self.eigenvectors_2d()?;
+            let u = Matrix::new(vec![
+                vec![v1.values()[0], v2.values()[0]],
+                vec![v1.values()[1], v2.values()[1]],
+            ])
+            .unwrap();
+            let v = u.clone().invert_2d()?;
+            return Ok((u, sigma, v));
+        } else {
+            Err("Matrix is not 2x2".into())
+        }
+    }
+
+    pub fn polar_decomposition_2d(self) -> Result<(Matrix<T>, Matrix<T>), Box<dyn Error>> {
+        let transpose_a_by_a = (self.transpose() * self.clone())?;
+        if let Ok((u, sigma, v)) = transpose_a_by_a.svd_2d() {
+            let s = ((u * sigma)? * v)?;
+            let q = (self * s.clone().invert_2d()?)?;
+            return Ok((q, s));
+        }
+        Err("Matrix is not 2x2".into())
     }
 }
 
@@ -133,6 +221,24 @@ where
             }
         }
         Ok(Matrix { values: c })
+    }
+}
+
+impl<T, U> Mul<U> for Matrix<T>
+where
+    T: Number + Mul<U, Output = U>,
+    U: Number,
+{
+    type Output = Matrix<U>;
+
+    fn mul(self, scalar: U) -> Self::Output {
+        Matrix {
+            values: self
+                .values
+                .iter()
+                .map(|row| row.iter().map(|val| val.clone() * scalar).collect())
+                .collect(),
+        }
     }
 }
 
@@ -200,13 +306,20 @@ mod tests {
             vec![1.0, 2.0, 2.0],
         ])
         .unwrap();
-        assert!(a.determinant() == Ok(4.0));
+        assert!(a.determinant().unwrap() == 4.0);
     }
 
     #[test]
-    fn matrix_vector_mult() {
+    fn test_matrix_vector_mult() {
         let a = Matrix::new(vec![vec![1, -1, 2], vec![0, -3, 1]]).unwrap();
         let v = Vector::new(vec![2, 1, 0]).unwrap();
         assert!((a * v).unwrap() == Vector::new(vec![1, -3]).unwrap());
+    }
+
+    #[test]
+    fn test_transpose() {
+        let a = Matrix::new(vec![vec![1, 0], vec![1, 1]]).unwrap();
+        let v = a.transpose();
+        assert!(v == Matrix::new(vec![vec![1, 1], vec![0, 1]]).unwrap());
     }
 }

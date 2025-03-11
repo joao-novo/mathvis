@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{f32, path::PathBuf};
 
 use crate::animation::show::Show2D;
 
@@ -26,9 +26,9 @@ pub struct Screen2D {
 
 // #[derive(Debug, PartialEq, Clone, Copy)]
 // pub struct Screen3D {
-//     x_axis: (f32, f32),
-//     y_axis: (f32, f32),
-//     z_axis: (f32, f32),
+//     x_axis: (f64, f64),
+//     y_axis: (f64, f64),
+//     z_axis: (f64, f64),
 // }
 
 impl Screen2D {
@@ -64,7 +64,10 @@ impl Screen2D {
     pub fn get_center_pixels(&self, res: Point<f32>) -> (f32, f32) {
         let ratio_x = self.x_axis.0.abs() / (self.x_axis.1.abs() + self.x_axis.0.abs());
         let ratio_y = self.y_axis.1.abs() / (self.y_axis.1.abs() + self.y_axis.0.abs());
-        (res.values()[0] * ratio_x, res.values()[1] * ratio_y)
+        (
+            res.values()[0] * ratio_x as f32,
+            res.values()[1] * ratio_y as f32,
+        )
     }
 
     pub fn change_current_frame(&mut self, val: u32) {
@@ -93,9 +96,9 @@ impl<T: Number> ScreenLike<T> for Screen2D {
 
 // impl Screen3D {
 //     pub fn new(
-//         (xstart, xend): (f32, f32),
-//         (ystart, yend): (f32, f32),
-//         (zstart, zend): (f32, f32),
+//         (xstart, xend): (f64, f64),
+//         (ystart, yend): (f64, f64),
+//         (zstart, zend): (f64, f64),
 //     ) -> Option<Self> {
 //         if xstart < xend && ystart < yend && zstart < zend {
 //             return Some(Screen3D {
@@ -107,17 +110,17 @@ impl<T: Number> ScreenLike<T> for Screen2D {
 //         None
 //     }
 
-//     pub fn z_axis(&self) -> (f32, f32) {
+//     pub fn z_axis(&self) -> (f64, f64) {
 //         self.z_axis
 //     }
 // }
 
 // impl ScreenLike for Screen3D {
-//     fn x_axis(&self) -> (f32, f32) {
+//     fn x_axis(&self) -> (f64, f64) {
 //         self.x_axis
 //     }
 
-//     fn y_axis(&self) -> (f32, f32) {
+//     fn y_axis(&self) -> (f64, f64) {
 //         self.y_axis
 //     }
 
