@@ -19,12 +19,13 @@ where
         &self,
         duration: f32,
         parametric: F,
-        t_min: f32,
-        t_max: f32,
+        t_min: f64,
+        t_max: f64,
     ) -> Result<(), Box<dyn Error>>
     where
-        F: Fn(f32) -> (f32, f32) + Send + Sync + 'static;
-    fn rotate(&self, duration: f32, angle: f32, center: Point<f32>) -> Result<(), Box<dyn Error>>;
-    fn move_to(&self, duration: f32, point: Point<f32>) -> Result<(), Box<dyn Error>>;
+        F: Fn(f64) -> (f64, f64) + Send + Sync + 'static;
+    fn rotate(&self, duration: f32, angle: f64, center: Point<f64>) -> Result<(), Box<dyn Error>>;
+    fn move_to(&self, duration: f32, point: Point<f64>) -> Result<(), Box<dyn Error>>;
     fn multiply_by_matrix(&self, duration: f32, matrix: Matrix<T>) -> Result<(), Box<dyn Error>>;
+    fn rotate_then_scale(&self, duration: f32, matrix: Matrix<T>) -> Result<(), Box<dyn Error>>;
 }

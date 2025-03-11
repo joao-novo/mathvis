@@ -7,7 +7,7 @@ use rand::rng;
 use super::util::Number;
 use super::vector::Vector;
 
-pub trait PointLike<T: Num + Clone + ToPrimitive> {
+pub trait PointLike<T: Number> {
     fn new(values: Vec<T>) -> Option<Self>
     where
         Self: Sized;
@@ -42,7 +42,7 @@ where
     Point<T>: PointLike<T>,
     T: Number + Sub<T, Output = T>,
 {
-    pub fn distance_to(&self, other: &Point<T>) -> Result<f32, &str> {
+    pub fn distance_to(&self, other: &Point<T>) -> Result<T, &str> {
         if self.get_dimensions() != other.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -50,8 +50,8 @@ where
             .values
             .iter()
             .zip(other.values.iter())
-            .fold(0.0, |acc, (a, b)| {
-                acc + (a.clone() - b.clone()).to_f32().unwrap().powi(2)
+            .fold(T::zero(), |acc, (a, b)| {
+                acc + (a.clone() - b.clone()).pow(2)
             })
             .sqrt())
     }

@@ -11,6 +11,7 @@ use std::{
 
 use animation::{axis::draw_axis, background::fill_background, show::Show2D, vector::Vector2D};
 use api::{
+    matrix::Matrix,
     point::{Point, PointLike},
     screen::Screen2D,
     util::Args,
@@ -61,10 +62,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     create_dir_all(format!("{}/tmp", directory))?;
 
     let white = Rgb([255, 255, 255]);
-    let mut img = RgbImage::new(
-        args.quality.resolution().values()[0] as u32,
-        args.quality.resolution().values()[1] as u32,
-    );
     let screen = Arc::new(Mutex::new(
         Screen2D::new(
             (-3.0, 3.0),
@@ -76,15 +73,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         )
         .unwrap(),
     ));
-    let mut v = Vector2D::new(0, 1, white);
-    v.add_context(screen.clone()).unwrap();
-    v.move_to(1.0, Point::new(vec![1.0, 1.0]).unwrap()).unwrap();
-    v.rotate(1.0, 2.0 * PI, Point::new(vec![1.0, 0.0]).unwrap())
-        .unwrap();
-
+    let mut v = Vector2D::new(0.0, 1.0, white);
+    v.add_context(screen.clone())?;
+    v.rotate_then_scale(
+        2.0,
+        Matrix::new(vec![vec![1.0, 0.0], vec![1.0, 1.0]]).unwrap(),
+    )?;
     join_frames(&args, directory.clone())?;
 
-    // remove_dir_all(format!("{}/tmp", directory)).unwrap();
+    remove_dir_all(format!("{}/tmp", directory)).unwrap();
     Ok(())
 }
 

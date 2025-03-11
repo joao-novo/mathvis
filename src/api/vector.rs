@@ -7,7 +7,10 @@ use rand::{
 };
 
 use super::{point::PointLike, util::Number};
-use std::ops::{Add, Mul};
+use std::{
+    error::Error,
+    ops::{Add, Mul},
+};
 
 /// An n-dimensional vector that allows for different vector operations.
 ///
@@ -22,7 +25,7 @@ where
     T: Number,
     Vector<T>: PointLike<T>,
 {
-    pub fn dot(&self, rhs: Vector<impl Number>) -> Result<f32, &str> {
+    pub fn dot(&self, rhs: Vector<T>) -> Result<T, &str> {
         if self.get_dimensions() != rhs.get_dimensions() {
             return Err("wrong dimensions");
         }
@@ -30,9 +33,23 @@ where
             .values
             .iter()
             .zip(rhs.values.iter())
-            .fold(0.0, |acc, (a, b)| {
-                acc + a.to_f32().unwrap() * b.to_f32().unwrap()
-            }))
+            .fold(T::zero(), |acc, (a, b)| acc + *a * *b))
+    }
+
+    pub fn norm(&self) -> T {
+        self.values
+            .iter()
+            .fold(T::zero(), |acc, a| acc + *a * *a)
+            .sqrt()
+    }
+
+    pub fn normalize(&self) -> Result<Vector<T>, Box<dyn Error>> {
+        if self.norm() == T::zero() {
+            return Err("Cannot normalize vector of norm 0".into());
+        }
+        Ok(Vector {
+            values: self.values.iter().map(|val| *val / self.norm()).collect(),
+        })
     }
 }
 
