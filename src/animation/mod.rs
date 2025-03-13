@@ -1,4 +1,4 @@
-pub mod axis;
-pub mod background;
+pub(crate) mod axis;
+pub(crate) mod background;
 pub mod show;
 pub mod vector;

@@ -1,12 +1,14 @@
+//! Module containing a 2D wrapper for a vector that implements animation operations
+#![warn(missing_docs)]
 use std::{
     error::Error,
     f64::consts::PI,
     ops::{Add, Mul},
-    sync::{atomic::AtomicUsize, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
 
 use imageproc::{
-    drawing::{draw_line_segment_mut, draw_polygon_mut, Canvas},
+    drawing::{draw_line_segment_mut, draw_polygon_mut},
     image::{Rgb, RgbImage},
     point::Point,
 };
@@ -24,6 +26,19 @@ use crate::{
 
 use super::{axis::draw_axis, background::fill_background, show::Show2D};
 
+/// A 2D vector implementation.
+/// Implements some of the operations of [Vector] and contains one inside for access to more general operations.
+/// Cannot be compared due to using an Arc for thread safety.
+///
+/// # Examples
+/// ```
+/// use mathvis::animation::vector::Vector2D;
+/// use imageproc::image::Rgb;
+///
+/// let vector = Vector2D::new(1, 1, Rgb([255, 255, 255]));
+///
+/// vector.clone().dot(vector);
+/// ```
 #[derive(Debug, Clone)]
 pub struct Vector2D<T: Number> {
     vector: Vector<T>,
@@ -172,7 +187,9 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
 
         {
             let mut context_lock = context.lock().unwrap();
-            context_lock.change_current_frame(current_frame + frames);
+            context_lock
+                .change_current_frame(current_frame + frames)
+                .unwrap();
         }
 
         Ok(())
@@ -236,6 +253,17 @@ impl<T: Number> Show2D<T> for Vector2D<T> {
 }
 
 impl<T: Number> Vector2D<T> {
+    /// Creates a new Vector2D with the specified x, y and color.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mathvis::animation::vector::Vector2D;
+    /// use imageproc::image::Rgb;
+    ///
+    /// let color = Rgb([255, 0, 255]);
+    /// let vector = Vector2D::new(5, 2, color);
+    /// ```
     pub fn new(x: T, y: T, color: Rgb<u8>) -> Self {
         // Known to work since x and y always exist
         let vector = Vector::new(vec![x, y]).unwrap();
@@ -248,11 +276,34 @@ impl<T: Number> Vector2D<T> {
         }
     }
 
+    /// Wrapper for the dot product between two vectors.
+    /// Unlike its more general counterpart, since both vectors always have the same dimension, it returns the value itself.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mathvis::animation::vector::Vector2D;
+    /// use imageproc::image::Rgb;
+    ///
+    /// let vector = Vector2D::new(1, 1, Rgb([255, 255, 255]));
+    /// assert_eq!(vector.clone().dot(vector), 2);
+    /// ```
     pub fn dot(&self, other: Vector2D<T>) -> T {
         // Always works because both vectors are 2D
         self.vector.dot(other.vector).unwrap()
     }
 
+    /// Creates a new Vector2D on the origin with the specified color.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use mathvis::animation::vector::Vector2D;
+    /// use imageproc::image::Rgb;
+    ///
+    /// let color = Rgb([255, 0, 255]);
+    /// let vector = Vector2D::<f32>::origin(color);
+    /// ```
     pub fn origin(color: Rgb<u8>) -> Self {
         let vector = Vector::origin(2).unwrap();
         Self {
@@ -341,7 +392,7 @@ pub(crate) fn draw_vector<T>(
 {
     let screen = screen.lock().unwrap();
     let quality = Quality::new(img.width(), img.height()).unwrap();
-    let center = screen.get_center_pixels(quality.resolution());
+    let center = screen.get_center_pixels();
     let (x, y) = interpolate(
         quality,
         Arc::new(screen.clone()),
@@ -354,7 +405,7 @@ pub(crate) fn draw_vector<T>(
     draw_vector_tip(vector, img, color, Arc::new(screen.clone()), quality);
 }
 
-pub(crate) fn rotate(point: &Point<f64>, angle: f64, rotation_center: &Point<f64>) -> Point<f64> {
+fn rotate(point: &Point<f64>, angle: f64, rotation_center: &Point<f64>) -> Point<f64> {
     let new_x = (point.x - rotation_center.x) * angle.cos()
         - (point.y - rotation_center.y) * angle.sin()
         + rotation_center.x;
@@ -364,7 +415,7 @@ pub(crate) fn rotate(point: &Point<f64>, angle: f64, rotation_center: &Point<f64
     Point::new(new_x, new_y)
 }
 
-pub(crate) fn draw_vector_tip<T>(
+fn draw_vector_tip<T>(
     vector: &Vector<T>,
     img: &mut RgbImage,
     color: Rgb<u8>,

@@ -1,3 +1,5 @@
+//! Module containing functions for drawing axes on the screen.
+//! Should not be used outside of the internal API for now.
 use std::sync::Arc;
 
 use imageproc::{
@@ -14,7 +16,7 @@ use crate::api::{
 
 fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Quality) {
     let usable_res = quality.usable();
-    let center = screen.get_center_pixels(quality.resolution());
+    let center = screen.get_center_pixels();
     draw_line_segment_mut(
         img,
         (
@@ -36,7 +38,7 @@ fn draw_lines(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality
 }
 
 fn draw_arrow_tips(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quality: Quality) {
-    let center = screen.get_center_pixels(quality.resolution());
+    let center = screen.get_center_pixels();
     let usable = quality.usable();
 
     draw_polygon_mut(
@@ -92,7 +94,7 @@ fn draw_markers(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>, quali
     }
 }
 
-pub fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>) {
+pub(crate) fn draw_axis(img: &mut RgbImage, color: Rgb<u8>, screen: Arc<Screen2D>) {
     let quality = Quality::new(img.width(), img.height()).unwrap();
     draw_lines(img, color, screen.clone(), quality);
     draw_arrow_tips(img, color, screen.clone(), quality);
