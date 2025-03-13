@@ -1,26 +1,20 @@
 pub mod animation;
 pub mod api;
-pub mod misc;
+mod misc;
 use std::{
     error::Error,
-    f32::consts::PI,
     fs::{create_dir_all, remove_dir_all},
     process::Command,
     sync::{Arc, Mutex},
 };
 
-use animation::{axis::draw_axis, background::fill_background, show::Show2D, vector::Vector2D};
-use api::{
-    matrix::Matrix,
-    point::{Point, PointLike},
-    screen::Screen2D,
-    util::Args,
-};
+use animation::show::Show2D;
+use animation::vector::Vector2D;
+use api::{matrix::Matrix, point::PointLike, screen::Screen2D, util::Args};
 use clap::Parser;
-use imageproc::image::{Rgb, RgbImage};
-use misc::thread_pool::ThreadPool;
+use imageproc::image::Rgb;
 
-pub fn join_frames(args: &Args, directory: String) -> Result<(), Box<dyn Error>> {
+pub(crate) fn join_frames(args: &Args, directory: String) -> Result<(), Box<dyn Error>> {
     let codec = if args.gif {
         vec!["-f", "gif"]
     } else {

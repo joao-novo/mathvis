@@ -1,24 +1,26 @@
+//! Module containing utility functions to be used by the internal API
+#![warn(missing_docs)]
 use std::{
     fmt::Display,
     ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign},
     path::PathBuf,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
 
 use clap::{command, Parser, ValueEnum};
-use imageproc::image::RgbImage;
-use num_traits::{real::Real, Float, Num, Pow, ToPrimitive};
 
 use super::{
     point::{Point, PointLike},
     screen::{Screen2D, ScreenLike},
 };
-pub fn in_axis_range<T: Number>(val: T, (start, end): (f32, f32)) -> bool {
+
+/// Returns whether or not a value is inside an axis' range.
+pub(crate) fn in_axis_range<T: Number>(val: T, (start, end): (f32, f32)) -> bool {
     start <= val.to_f64() as f32 && val.to_f64() as f32 <= end
 }
 
 #[derive(ValueEnum, Clone, Debug, PartialEq, Eq, Copy)]
-pub enum Quality {
+pub(crate) enum Quality {
     LOW,
     MEDIUM,
     HIGH,
@@ -26,7 +28,10 @@ pub enum Quality {
 }
 
 impl Quality {
-    pub fn new(x: u32, y: u32) -> Option<Quality> {
+    /// Creates a new Quality enum instance.
+    ///
+    /// Returns Some with the value if the x and y values correspond to a valid quality and None otherwise.
+    pub(crate) fn new(x: u32, y: u32) -> Option<Quality> {
         match (x, y) {
             (854, 480) => Some(Quality::LOW),
             (1280, 720) => Some(Quality::MEDIUM),
@@ -35,7 +40,9 @@ impl Quality {
             _ => None,
         }
     }
-    pub fn resolution(&self) -> Point<f32> {
+
+    /// Returns a [Point] with the quality's resolution values.
+    pub(crate) fn resolution(&self) -> Point<f32> {
         match self {
             Quality::LOW => Point::new(vec![854.0, 480.0]).unwrap(),
             Quality::MEDIUM => Point::new(vec![1280.0, 720.0]).unwrap(),
@@ -44,7 +51,8 @@ impl Quality {
         }
     }
 
-    pub fn usable(&self) -> Point<f32> {
+    /// Returns a [Point] with the quality's usable resolution values (95% of the total x and y values).
+    pub(crate) fn usable(&self) -> Point<f32> {
         let res = self.resolution();
         return Point::new(vec![0.95 * res.values()[0], 0.95 * res.values()[1]]).unwrap();
     }
@@ -61,11 +69,14 @@ impl ToString for Quality {
     }
 }
 
-pub fn interpolate(quality: Quality, screen: Arc<Screen2D>, (x, y): (f32, f32)) -> (f32, f32) {
-    let res = quality.resolution();
+/// Converts an (x, y) coordinate into a pixel position.
+pub(crate) fn interpolate(
+    quality: Quality,
+    screen: Arc<Screen2D>,
+    (x, y): (f32, f32),
+) -> (f32, f32) {
     let usable_res = quality.usable();
-    let center =
-        screen.get_center_pixels(Point::new(vec![res.values()[0], res.values()[1]]).unwrap());
+    let center = screen.get_center_pixels();
     let scaling_factor = (
         usable_res.values()[0]
             / (ScreenLike::<f32>::x_axis(&*screen).0.abs()
@@ -80,6 +91,8 @@ pub fn interpolate(quality: Quality, screen: Arc<Screen2D>, (x, y): (f32, f32)) 
     )
 }
 
+/// Trait that represents a generic signed number type.
+/// Number implements all basic operations, partial ordering and equality, Send and Sync for safe passing between threads, Display and Debug for testing purposes, and Sized because all numbers must have a compile-time size
 pub trait Number:
     Add<Output = Self>
     + Sub<Output = Self>
@@ -101,19 +114,34 @@ pub trait Number:
     + Sized
     + 'static
 {
+    /// Returns the value 0 for that type.
     fn zero() -> Self;
+    /// Returns the value 1 for that type.
     fn one() -> Self;
+    /// Checks if a value is 0.
     fn is_zero(self) -> bool;
+    /// Returns the absolute value of that number.
     fn abs(self) -> Self;
+    /// Returns the square root of that number in that type.
+    /// For integer types, the result is truncated to only the integer part.
     fn sqrt(self) -> Self;
+    /// Returns the result of raising a value to a specified integer.
     fn pow(self, exponent: i32) -> Self;
+    /// Converts an f64 into this type.
     fn from_f64(value: f64) -> Self;
+    /// Converts an f32 into this type.
     fn from_f32(value: f32) -> Self;
+    /// Converts an i64 into this type.
     fn from_i64(value: i64) -> Self;
+    /// Converts an i32 into this type.
     fn from_i32(value: i32) -> Self;
+    /// Converts this value into an f64
     fn to_f64(self) -> f64;
+    /// Converts this value into an i64
     fn to_i64(self) -> i64;
+    /// Checks if a value is positive
     fn is_positive(&self) -> bool;
+    /// Checks if a value is negative
     fn is_negative(&self) -> bool;
 }
 
@@ -354,25 +382,28 @@ impl Number for i64 {
         *self < 0
     }
 }
+
+/// Struct containing the command line arguments for the CLI interface
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about)]
-pub struct Args {
-    pub source: String,
+pub(crate) struct Args {
+    pub(crate) source: String,
 
     #[arg(long, default_value_t = 30)]
-    pub fps: u32,
+    pub(crate) fps: u32,
 
     #[arg(short, long, default_value_os = "../output/output.mp4")]
-    pub output: PathBuf,
+    pub(crate) output: PathBuf,
 
     #[arg(long, default_value_t = false)]
-    pub gif: bool,
+    pub(crate) gif: bool,
 
     #[arg(short, long, default_value_t = Quality::HIGH)]
-    pub quality: Quality,
+    pub(crate) quality: Quality,
 }
 
-pub fn quadsolve<T: Number>(a: T, b: T, c: T) -> (T, T) {
+/// Returns the solution of a quadratic equation with the specified coefficients.
+pub(crate) fn quadsolve<T: Number>(a: T, b: T, c: T) -> (T, T) {
     let delta = b * b - a * T::from_f64(4.0) * c;
     (
         (-b + delta.sqrt()) / (a * T::from_f64(2.0)),
